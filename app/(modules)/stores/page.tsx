@@ -15,7 +15,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 interface ImportResult {
   success: boolean;

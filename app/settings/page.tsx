@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -1352,7 +1352,7 @@ export default function SettingsPage() {
         } else {
           // Updating existing user
           await updateDoc(doc(db, 'users', id), userData);
-          console.log(`âœ… Updated user ${id} with salesPerson: ${fishbowlUsername}`);
+          console.log(`✅ Updated user ${id} with salesPerson: ${fishbowlUsername}`);
         }
       }
       toast.success('Sales reps saved successfully');
@@ -1570,7 +1570,7 @@ export default function SettingsPage() {
       
       // Sync to Copper if we have a Copper ID
       if (copperId) {
-        console.log(`ðŸ”„ Syncing account type change to Copper for ${customerName}...`);
+        console.log(`🔄 Syncing account type change to Copper for ${customerName}...`);
         
         try {
           const copperResponse = await fetch('/api/copper/update-account-type', {
@@ -1586,10 +1586,10 @@ export default function SettingsPage() {
           const copperResult = await copperResponse.json();
           
           if (copperResult.success) {
-            console.log(`âœ… Copper updated successfully for ${customerName}`);
+            console.log(`✅ Copper updated successfully for ${customerName}`);
             toast.success('Account type updated in Fishbowl and Copper!');
           } else if (copperResult.warning) {
-            console.warn(`âš ï¸ ${copperResult.warning}`);
+            console.warn(`⚠️ ${copperResult.warning}`);
             toast.success('Account type updated in Fishbowl (Copper sync skipped)');
           }
         } catch (copperError) {
@@ -1668,7 +1668,7 @@ export default function SettingsPage() {
       
       // Sync to Copper if we have a Copper ID
       if (copperId && newFishbowlUsername && newFishbowlUsername !== '') {
-        console.log(`ðŸ”„ Syncing sales rep change to Copper for ${customerName}...`);
+        console.log(`🔄 Syncing sales rep change to Copper for ${customerName}...`);
         
         try {
           const copperResponse = await fetch('/api/copper/update-owner', {
@@ -1684,10 +1684,10 @@ export default function SettingsPage() {
           const copperResult = await copperResponse.json();
           
           if (copperResult.success) {
-            console.log(`âœ… Copper updated successfully for ${customerName}`);
+            console.log(`✅ Copper updated successfully for ${customerName}`);
             toast.success('Sales rep updated in Fishbowl and Copper!');
           } else if (copperResult.warning) {
-            console.warn(`âš ï¸ ${copperResult.warning}`);
+            console.warn(`⚠️ ${copperResult.warning}`);
             toast.success('Sales rep updated in Fishbowl (Copper sync skipped)');
           }
         } catch (copperError) {
@@ -1754,14 +1754,14 @@ export default function SettingsPage() {
       let failCount = 0;
       let copperSyncCount = 0;
 
-      console.log(`ðŸ”„ Starting batch update for ${selectedCustomers.size} customers`);
+      console.log(`🔄 Starting batch update for ${selectedCustomers.size} customers`);
       console.log(`   Account Type: ${batchAccountType || 'none'}`);
       console.log(`   Sales Rep: ${batchSalesRep || 'none'}`);
       console.log(`   Transfer Status: ${batchTransferStatus || 'none'}`);
 
       // Process each customer individually to trigger Copper sync
       for (const customerId of Array.from(selectedCustomers)) {
-        console.log(`\nðŸ“ Processing customer: ${customerId}`);
+        console.log(`\n📝 Processing customer: ${customerId}`);
         try {
           const customerRef = doc(db, 'fishbowl_customers', customerId);
           const customerSnapshot = await getDoc(customerRef);
@@ -1774,12 +1774,12 @@ export default function SettingsPage() {
           
           // Update Account Type
           if (batchAccountType) {
-            console.log(`   â†’ Setting accountType to: ${batchAccountType}`);
+            console.log(`   → Setting accountType to: ${batchAccountType}`);
             updates.accountType = batchAccountType;
             
             // Sync to Copper if available
             if (copperId) {
-              console.log(`   â†’ Syncing account type to Copper...`);
+              console.log(`   → Syncing account type to Copper...`);
               try {
                 const copperResponse = await fetch('/api/copper/update-account-type', {
                   method: 'POST',
@@ -1788,32 +1788,32 @@ export default function SettingsPage() {
                 });
                 const copperResult = await copperResponse.json();
                 if (copperResult.success) {
-                  console.log(`   âœ… Copper account type synced`);
+                  console.log(`   ✅ Copper account type synced`);
                   copperSyncCount++;
                 } else {
-                  console.log(`   âš ï¸ Copper sync skipped: ${copperResult.warning || copperResult.error}`);
+                  console.log(`   ⚠️ Copper sync skipped: ${copperResult.warning || copperResult.error}`);
                 }
               } catch (copperError) {
-                console.error(`   âŒ Copper sync failed:`, copperError);
+                console.error(`   ❌ Copper sync failed:`, copperError);
               }
             } else {
-              console.log(`   âš ï¸ No Copper ID, skipping sync`);
+              console.log(`   ⚠️ No Copper ID, skipping sync`);
             }
           }
           
           // Update Sales Rep
           if (batchSalesRep) {
-            console.log(`   â†’ Looking for rep with salesPerson: ${batchSalesRep}`);
+            console.log(`   → Looking for rep with salesPerson: ${batchSalesRep}`);
             const selectedRep = reps.find(r => r.salesPerson === batchSalesRep);
-            console.log(`   â†’ Found rep:`, selectedRep);
+            console.log(`   → Found rep:`, selectedRep);
             if (selectedRep) {
               updates.salesPerson = selectedRep.name;
               updates.fishbowlUsername = selectedRep.salesPerson;
-              console.log(`   â†’ Setting salesPerson to: ${selectedRep.name} (${selectedRep.salesPerson})`);
+              console.log(`   → Setting salesPerson to: ${selectedRep.name} (${selectedRep.salesPerson})`);
               
               // Sync to Copper if available
               if (copperId && selectedRep.salesPerson) {
-                console.log(`   â†’ Syncing sales rep to Copper...`);
+                console.log(`   → Syncing sales rep to Copper...`);
                 try {
                   const copperResponse = await fetch('/api/copper/update-owner', {
                     method: 'POST',
@@ -1822,30 +1822,30 @@ export default function SettingsPage() {
                   });
                   const copperResult = await copperResponse.json();
                   if (copperResult.success) {
-                    console.log(`   âœ… Copper owner synced`);
+                    console.log(`   ✅ Copper owner synced`);
                     copperSyncCount++;
                   } else {
-                    console.log(`   âš ï¸ Copper sync skipped: ${copperResult.warning || copperResult.error}`);
+                    console.log(`   ⚠️ Copper sync skipped: ${copperResult.warning || copperResult.error}`);
                   }
                 } catch (copperError) {
-                  console.error(`   âŒ Copper sync failed:`, copperError);
+                  console.error(`   ❌ Copper sync failed:`, copperError);
                 }
               } else {
-                console.log(`   âš ï¸ No Copper ID or salesPerson, skipping sync`);
+                console.log(`   ⚠️ No Copper ID or salesPerson, skipping sync`);
               }
             } else {
-              console.error(`   âŒ Rep not found with ID: ${batchSalesRep}`);
+              console.error(`   ❌ Rep not found with ID: ${batchSalesRep}`);
             }
           }
 
           // Update Transfer Status
           if (batchTransferStatus) {
             const statusValue = batchTransferStatus === 'auto' ? null : batchTransferStatus;
-            console.log(`   â†’ Setting transferStatus to: ${statusValue}`);
+            console.log(`   → Setting transferStatus to: ${statusValue}`);
             updates.transferStatus = statusValue;
           }
 
-          console.log(`   â†’ Updating Firestore with:`, updates);
+          console.log(`   → Updating Firestore with:`, updates);
           // Update Firestore
           await updateDoc(customerRef, updates);
           
@@ -1857,25 +1857,25 @@ export default function SettingsPage() {
             c.id === customerId ? { ...c, ...updates } : c
           ));
           
-          console.log(`   âœ… Customer updated successfully`);
+          console.log(`   ✅ Customer updated successfully`);
           successCount++;
         } catch (error) {
-          console.error(`   âŒ Failed to update customer ${customerId}:`, error);
+          console.error(`   ❌ Failed to update customer ${customerId}:`, error);
           failCount++;
         }
       }
       
-      console.log(`\nðŸ“Š Batch update complete:`);
+      console.log(`\n📊 Batch update complete:`);
       console.log(`   Success: ${successCount}`);
       console.log(`   Failed: ${failCount}`);
       console.log(`   Copper Synced: ${copperSyncCount}`);
 
       const message = copperSyncCount > 0 
-        ? `âœ… Updated ${successCount} customers (${copperSyncCount} synced to Copper)!` 
-        : `âœ… Updated ${successCount} customers!`;
+        ? `✅ Updated ${successCount} customers (${copperSyncCount} synced to Copper)!` 
+        : `✅ Updated ${successCount} customers!`;
       
       if (failCount > 0) {
-        toast.error(`âš ï¸ ${failCount} customers failed to update`, { id: loadingToast });
+        toast.error(`⚠️ ${failCount} customers failed to update`, { id: loadingToast });
       } else {
         toast.success(message, { id: loadingToast });
       }
@@ -1927,7 +1927,7 @@ export default function SettingsPage() {
       setCsvPreview(result);
       setShowCsvPreview(true);
       
-      toast.success(`ðŸ“Š Preview ready: ${result.stats.new} new, ${result.stats.updated} updates`);
+      toast.success(`📊 Preview ready: ${result.stats.new} new, ${result.stats.updated} updates`);
     } catch (error: any) {
       console.error('Error previewing CSV:', error);
       toast.error(error.message || 'Failed to preview CSV');
@@ -1962,7 +1962,7 @@ export default function SettingsPage() {
       }
 
       toast.success(
-        `âœ… Import complete! ${result.stats.created} created, ${result.stats.updated} updated`,
+        `✅ Import complete! ${result.stats.created} created, ${result.stats.updated} updated`,
         { id: loadingToast }
       );
 
@@ -2044,7 +2044,7 @@ export default function SettingsPage() {
     try {
       const fileSize = fishbowlFile.size;
       const fileSizeMB = fileSize / 1024 / 1024;
-      console.log(`ðŸ“¦ Uploading ${fishbowlFile.name} (${fileSizeMB.toFixed(2)} MB)`);
+      console.log(`📦 Uploading ${fishbowlFile.name} (${fileSizeMB.toFixed(2)} MB)`);
       
       // Use chunked upload for files larger than 700KB
       // Chunk size must stay under ~750KB so base64 encoded data fits in Firestore's 1MB field limit
@@ -2056,7 +2056,7 @@ export default function SettingsPage() {
         const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
         const fileId = `file_${Date.now()}`;
         
-        console.log(`ðŸ“¦ Splitting into ${totalChunks} chunks...`);
+        console.log(`📦 Splitting into ${totalChunks} chunks...`);
         toast.loading(`Uploading in ${totalChunks} chunks...`, { id: loadingToast });
         
         let uploadedChunks = 0;
@@ -2090,12 +2090,12 @@ export default function SettingsPage() {
           }
           
           uploadedChunks++;
-          console.log(`âœ… Uploaded chunk ${i + 1}/${totalChunks}`);
+          console.log(`✅ Uploaded chunk ${i + 1}/${totalChunks}`);
           
           // If this was the last chunk, we'll get an importId
           if (data.complete && data.importId) {
             currentImportId = data.importId;
-            console.log(`ðŸŽ‰ All chunks uploaded! Import ID: ${currentImportId}`);
+            console.log(`🎉 All chunks uploaded! Import ID: ${currentImportId}`);
             break;
           }
         }
@@ -2112,7 +2112,7 @@ export default function SettingsPage() {
         
       } else {
         // SMALL FILE: Use unified import (no chunking needed)
-        console.log(`ðŸ“¦ File is small (${fileSizeMB.toFixed(2)} MB), using direct upload`);
+        console.log(`📦 File is small (${fileSizeMB.toFixed(2)} MB), using direct upload`);
         
         const formData = new FormData();
         formData.append('file', fishbowlFile);
@@ -2130,7 +2130,7 @@ export default function SettingsPage() {
           throw new Error(data.error || 'Import failed');
         }
         
-        console.log('âœ… Import completed!', data.stats);
+        console.log('✅ Import completed!', data.stats);
         
         // Set result with stats
         setFishbowlResult({
@@ -2147,7 +2147,7 @@ export default function SettingsPage() {
         const savedPercentage = totalWrites + totalSkipped > 0 ? ((totalSkipped / (totalWrites + totalSkipped)) * 100).toFixed(1) : '0.0';
         
         toast.success(
-          `âœ… Import Complete! ${totalWrites.toLocaleString()} writes (saved ${totalSkipped.toLocaleString()} - ${savedPercentage}% reduction)`,
+          `✅ Import Complete! ${totalWrites.toLocaleString()} writes (saved ${totalSkipped.toLocaleString()} - ${savedPercentage}% reduction)`,
           { id: loadingToast, duration: 5000 }
         );
         
@@ -2214,7 +2214,7 @@ export default function SettingsPage() {
             const savedPercentage = totalWrites + totalSkipped > 0 ? ((totalSkipped / (totalWrites + totalSkipped)) * 100).toFixed(1) : '0.0';
             
             toast.success(
-              `âœ… Import Complete! ${totalWrites.toLocaleString()} writes (saved ${totalSkipped.toLocaleString()} - ${savedPercentage}% reduction)`,
+              `✅ Import Complete! ${totalWrites.toLocaleString()} writes (saved ${totalSkipped.toLocaleString()} - ${savedPercentage}% reduction)`,
               { id: toastId, duration: 5000 }
             );
             
@@ -2242,7 +2242,7 @@ export default function SettingsPage() {
   const handleCopperApiSync = async () => {
     setCopperApiSyncLoading(true);
     setCopperApiSyncResult(null);
-    const loadingToast = toast.loading('ðŸ”¥ Fetching ALL fields from Copper API...');
+    const loadingToast = toast.loading('🔥 Fetching ALL fields from Copper API...');
     
     try {
       const response = await fetch('/api/sync-copper-api-fresh', {
@@ -2255,13 +2255,13 @@ export default function SettingsPage() {
         throw new Error(data.error || 'Copper API sync failed');
       }
       
-      console.log('âœ… Copper API sync completed!', data);
+      console.log('✅ Copper API sync completed!', data);
       
       setCopperApiSyncResult(data);
       setCopperApiSyncLoading(false);
       
       toast.success(
-        `âœ… Synced ${data.stats.activeFetched} ACTIVE companies! (${data.stats.created} new, ${data.stats.updated} updated)`,
+        `✅ Synced ${data.stats.activeFetched} ACTIVE companies! (${data.stats.created} new, ${data.stats.updated} updated)`,
         { id: loadingToast, duration: 5000 }
       );
       
@@ -2275,7 +2275,7 @@ export default function SettingsPage() {
   const handleCustomerSync = async (liveMode = false) => {
     setCustomerSyncLoading(true);
     setCustomerSyncResult(null);
-    const loadingToast = toast.loading(liveMode ? 'ðŸ”´ LIVE MODE: Syncing customers...' : 'ðŸŸ¢ DRY RUN: Analyzing changes...');
+    const loadingToast = toast.loading(liveMode ? '🔴 LIVE MODE: Syncing customers...' : '🟢 DRY RUN: Analyzing changes...');
     
     try {
       const response = await fetch(`/api/sync-copper-customers?live=${liveMode}`, {
@@ -2288,19 +2288,19 @@ export default function SettingsPage() {
         throw new Error(data.error || 'Customer sync failed');
       }
       
-      console.log('âœ… Customer sync completed!', data);
+      console.log('✅ Customer sync completed!', data);
       
       setCustomerSyncResult(data);
       setCustomerSyncLoading(false);
       
       if (liveMode) {
         toast.success(
-          `âœ… LIVE: Created ${data.wouldCreate} + Updated ${data.wouldUpdate} customers!`,
+          `✅ LIVE: Created ${data.wouldCreate} + Updated ${data.wouldUpdate} customers!`,
           { id: loadingToast, duration: 5000 }
         );
       } else {
         toast.success(
-          `âœ… DRY RUN: Would create ${data.wouldCreate} + update ${data.wouldUpdate} customers`,
+          `✅ DRY RUN: Would create ${data.wouldCreate} + update ${data.wouldUpdate} customers`,
           { id: loadingToast, duration: 5000 }
         );
       }
@@ -2320,7 +2320,7 @@ export default function SettingsPage() {
   const handleFixCustomFields = async (dryRun = true, startId = 74820794, endId = 74821021) => {
     setFixFieldsLoading(true);
     setFixFieldsResult(null);
-    const loadingToast = toast.loading(dryRun ? 'ðŸŸ¢ Analyzing custom fields...' : 'ðŸ”´ Fixing custom fields...');
+    const loadingToast = toast.loading(dryRun ? '🟢 Analyzing custom fields...' : '🔴 Fixing custom fields...');
     
     try {
       const response = await fetch('/api/copper/fix-custom-fields', {
@@ -2340,12 +2340,12 @@ export default function SettingsPage() {
       
       if (dryRun) {
         toast.success(
-          `âœ… DRY RUN: Found ${data.stats.processed} companies to update`,
+          `✅ DRY RUN: Found ${data.stats.processed} companies to update`,
           { id: loadingToast, duration: 5000 }
         );
       } else {
         toast.success(
-          `âœ… Updated ${data.stats.updated} companies with custom fields!`,
+          `✅ Updated ${data.stats.updated} companies with custom fields!`,
           { id: loadingToast, duration: 5000 }
         );
       }
@@ -2360,7 +2360,7 @@ export default function SettingsPage() {
   const matchRepRallyCustomers = async () => {
     setMatchCustomersLoading(true);
     setMatchCustomersResult(null);
-    const loadingToast = toast.loading('ðŸ” Matching RepRally locations with Fishbowl customers...');
+    const loadingToast = toast.loading('🔍 Matching RepRally locations with Fishbowl customers...');
     
     try {
       const response = await fetch('/api/reprally/match-customers');
@@ -2374,7 +2374,7 @@ export default function SettingsPage() {
       setMatchCustomersLoading(false);
       
       toast.success(
-        `âœ… Found ${data.stats.potentialSwitchers} potential switchers!`,
+        `✅ Found ${data.stats.potentialSwitchers} potential switchers!`,
         { id: loadingToast, duration: 5000 }
       );
       
@@ -2388,7 +2388,7 @@ export default function SettingsPage() {
   const extractRepRallyCustomers = async (dryRun = true) => {
     setExtractRepRallyLoading(true);
     setExtractRepRallyResult(null);
-    const loadingToast = toast.loading(dryRun ? 'ðŸ” Extracting customers from billing data...' : 'ðŸ”´ Creating customer records...');
+    const loadingToast = toast.loading(dryRun ? '🔍 Extracting customers from billing data...' : '🔴 Creating customer records...');
     
     try {
       const response = await fetch('/api/reprally/extract-customers', {
@@ -2408,8 +2408,8 @@ export default function SettingsPage() {
       
       toast.success(
         dryRun 
-          ? `âœ… Found ${data.stats.uniqueCustomersFound} unique RepRally customers`
-          : `âœ… Created ${data.stats.customersCreated} RepRally customer records`,
+          ? `✅ Found ${data.stats.uniqueCustomersFound} unique RepRally customers`
+          : `✅ Created ${data.stats.customersCreated} RepRally customer records`,
         { id: loadingToast, duration: 5000 }
       );
       
@@ -2423,7 +2423,7 @@ export default function SettingsPage() {
   const buildRepRallyCollection = async (dryRun = true) => {
     setbuildRepRallyLoading(true);
     setBuildRepRallyResult(null);
-    const loadingToast = toast.loading(dryRun ? 'ðŸŸ¢ Analyzing RepRally data...' : 'ðŸ”´ Building RepRally collection...');
+    const loadingToast = toast.loading(dryRun ? '🟢 Analyzing RepRally data...' : '🔴 Building RepRally collection...');
     
     try {
       const response = await fetch('/api/reprally/build-collection', {
@@ -2443,8 +2443,8 @@ export default function SettingsPage() {
       
       toast.success(
         dryRun 
-          ? `âœ… Found ${data.stats.repRallyCustomersCreated} RepRally customers`
-          : `âœ… Created reprally_customers collection with ${data.stats.repRallyCustomersCreated} customers`,
+          ? `✅ Found ${data.stats.repRallyCustomersCreated} RepRally customers`
+          : `✅ Created reprally_customers collection with ${data.stats.repRallyCustomersCreated} customers`,
         { id: loadingToast, duration: 5000 }
       );
       
@@ -2457,7 +2457,7 @@ export default function SettingsPage() {
 
   const loadThirdPartyAnalysis = async () => {
     setThirdPartyLoading(true);
-    const loadingToast = toast.loading('ðŸ” Analyzing 3rd party sales data...');
+    const loadingToast = toast.loading('🔍 Analyzing 3rd party sales data...');
     
     try {
       const response = await fetch('/api/analyze-third-party?type=switchers');
@@ -2471,7 +2471,7 @@ export default function SettingsPage() {
       setThirdPartyLoading(false);
       
       toast.success(
-        `âœ… Found ${data.summary.switchers} customers who switched to RepRally`,
+        `✅ Found ${data.summary.switchers} customers who switched to RepRally`,
         { id: loadingToast, duration: 5000 }
       );
       
@@ -2484,7 +2484,7 @@ export default function SettingsPage() {
 
   const loadReprallyAnalytics = async () => {
     setReprallyAnalyticsLoading(true);
-    const loadingToast = toast.loading('ðŸ“Š Loading RepRally analytics...');
+    const loadingToast = toast.loading('📊 Loading RepRally analytics...');
 
     try {
       const response = await fetch('/api/reprally/analytics');
@@ -2496,7 +2496,7 @@ export default function SettingsPage() {
 
       setReprallyAnalytics(data);
       setReprallyAnalyticsLoading(false);
-      toast.success('âœ… RepRally analytics loaded', { id: loadingToast, duration: 4000 });
+      toast.success('✅ RepRally analytics loaded', { id: loadingToast, duration: 4000 });
     } catch (error: any) {
       console.error('RepRally analytics error:', error);
       toast.error(error.message || 'Failed to load RepRally analytics', { id: loadingToast });
@@ -2506,7 +2506,7 @@ export default function SettingsPage() {
 
   const loadReprallySwitchers = async (write = false) => {
     setReprallySwitchersLoading(true);
-    const loadingToast = toast.loading(write ? 'âœï¸ Persisting switchers to Firestore...' : 'ðŸ” Finding RepRally switchers...');
+    const loadingToast = toast.loading(write ? '✍️ Persisting switchers to Firestore...' : '🔁 Finding RepRally switchers...');
 
     try {
       const response = await fetch(`/api/reprally/switchers?mode=strict&limit=500${write ? '&write=1' : ''}`);
@@ -2520,8 +2520,8 @@ export default function SettingsPage() {
       setReprallySwitchersLoading(false);
       toast.success(
         write
-          ? `âœ… Persisted ${data.switchers?.length || 0} switchers to reprally_customers`
-          : `âœ… Found ${data.stats?.switchersFound || 0} switchers`,
+          ? `✅ Persisted ${data.switchers?.length || 0} switchers to reprally_customers`
+          : `✅ Found ${data.stats?.switchersFound || 0} switchers`,
         { id: loadingToast, duration: 5000 }
       );
     } catch (error: any) {
@@ -2534,7 +2534,7 @@ export default function SettingsPage() {
   const handleMarkActiveInCopper = async (dryRun = true) => {
     setMarkActiveLoading(true);
     setMarkActiveResult(null);
-    const loadingToast = toast.loading(dryRun ? 'ðŸŸ¢ Analyzing active flags...' : 'ðŸ”´ Updating Copper active flags...');
+    const loadingToast = toast.loading(dryRun ? '🟢 Analyzing active flags...' : '🔴 Updating Copper active flags...');
     
     try {
       const response = await fetch('/api/copper/mark-active', {
@@ -2600,12 +2600,12 @@ export default function SettingsPage() {
       
       if (dryRun) {
         toast.success(
-          `âœ… DRY RUN: ${finalData.stats.withCopperId} customers have Copper ID, ${finalData.updates?.length || 0} need activation`,
+          `✅ DRY RUN: ${finalData.stats.withCopperId} customers have Copper ID, ${finalData.updates?.length || 0} need activation`,
           { id: loadingToast, duration: 5000 }
         );
       } else {
         const msg = [
-          `âœ… LIVE MODE Complete:`,
+          `✅ LIVE MODE Complete:`,
           finalData.stats.duplicatesFound > 0 ? `${finalData.stats.duplicatesFound} duplicates linked` : null,
           finalData.stats.namesUpdated > 0 ? `${finalData.stats.namesUpdated} names updated` : null,
           `${finalData.stats.copperCreated} created`,
@@ -2625,7 +2625,7 @@ export default function SettingsPage() {
   const handleCopperSync = async () => {
     setCopperSyncLoading(true);
     setCopperSyncResult(null);
-    const loadingToast = toast.loading('Syncing Copper â†’ Fishbowl...');
+    const loadingToast = toast.loading('Syncing Copper → Fishbowl...');
     
     try {
       const response = await fetch('/api/sync-copper-to-fishbowl', {
@@ -2638,13 +2638,13 @@ export default function SettingsPage() {
         throw new Error(data.error || 'Sync failed');
       }
       
-      console.log('âœ… Copper sync completed!', data.stats);
+      console.log('✅ Copper sync completed!', data.stats);
       
       setCopperSyncResult(data);
       setCopperSyncLoading(false);
       
       toast.success(
-        `âœ… Synced ${data.stats.matched} customers! Updated ${data.stats.updated} with Copper accountType.`,
+        `✅ Synced ${data.stats.matched} customers! Updated ${data.stats.updated} with Copper accountType.`,
         { id: loadingToast, duration: 5000 }
       );
       
@@ -2683,7 +2683,7 @@ export default function SettingsPage() {
         throw new Error(data.error || 'Calculation failed');
       }
       
-      console.log('âœ… Calculation started:', data.calcId);
+      console.log('✅ Calculation started:', data.calcId);
       toast.loading('Processing commissions...', { id: loadingToast });
       
       // Start polling for progress
@@ -2712,7 +2712,7 @@ export default function SettingsPage() {
               clearInterval(pollInterval);
               
               setProcessingProgress(100);
-              setProcessingStatus('Complete! ðŸŽ‰ðŸ’°');
+              setProcessingStatus('Complete! 🎉💰');
               setShowConfetti(true);
               
               // Store summary data
@@ -2733,7 +2733,7 @@ export default function SettingsPage() {
               });
               
               toast.success(
-                `âœ… Calculated ${progress.stats.commissionsCalculated} commissions! Total: $${progress.stats.totalCommission.toFixed(2)}`,
+                `✅ Calculated ${progress.stats.commissionsCalculated} commissions! Total: $${progress.stats.totalCommission.toFixed(2)}`,
                 { id: loadingToast, duration: 8000 }
               );
               

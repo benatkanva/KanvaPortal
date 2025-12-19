@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase/client';
-import JustCallMetrics from '@/components/JustCallMetrics';
+import JustCallMetrics from '@/components/goals-tracker/JustCallMetrics';
 import { Phone, Users, Calendar } from 'lucide-react';
 
 interface JustCallUser {
