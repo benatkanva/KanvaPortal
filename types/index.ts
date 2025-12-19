@@ -32,6 +32,8 @@ export interface Goal {
   period: GoalPeriod;
   targetValue: number;
   currentValue: number;
+  target?: number;  // Alias for targetValue (used by Goals Tracker)
+  current?: number; // Alias for currentValue (used by Goals Tracker)
   startDate: Date;
   endDate: Date;
   createdAt: Date;

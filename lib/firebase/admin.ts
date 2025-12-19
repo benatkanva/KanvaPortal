@@ -44,3 +44,14 @@ try {
 export const adminAuth = getAuth(app);
 export const adminDb = getFirestore(app);
 export const adminStorage = getStorage(app);
+
+// Verify ID token helper for API routes
+export async function verifyIdToken(token: string) {
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    return decodedToken;
+  } catch (error) {
+    console.error('[firebase-admin] verifyIdToken error:', error);
+    throw error;
+  }
+}
