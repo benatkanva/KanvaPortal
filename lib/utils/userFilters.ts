@@ -47,3 +47,15 @@ export function getUserInitials(user: User): string {
   }
   return name.substring(0, 2).toUpperCase();
 }
+
+export function isSalesUser(user: User): boolean {
+  return user.role === 'sales' || user.role === 'rep';
+}
+
+export function isAdminUser(user: User): boolean {
+  return user.role === 'admin';
+}
+
+export function isManagerUser(user: User): boolean {
+  return user.role === 'sales_manager';
+}
