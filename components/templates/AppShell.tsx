@@ -92,7 +92,7 @@ export default function AppShell({ children }: AppShellProps) {
 
             {/* Navigation */}
             {user && (
-              <nav className="flex items-center gap-2">
+              <nav className="flex items-center gap-1">
                 <Link
                   href={`/dashboard${query}`}
                   className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -115,15 +115,40 @@ export default function AppShell({ children }: AppShellProps) {
                   <Users className="w-4 h-4" /> Customers
                 </Link>
 
+                {/* Goals Module */}
                 <Link
-                  href={`/reports${query}`}
+                  href={`/goals/dashboard${query}`}
                   className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    isActive('/reports')
+                    pathname?.startsWith('/goals')
                       ? 'bg-primary-50 text-primary-700 font-medium'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <FileText className="w-4 h-4" /> Reports
+                  <Target className="w-4 h-4" /> Goals
+                </Link>
+
+                {/* Quotes Module */}
+                <Link
+                  href="/quotes/index.html"
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    pathname?.startsWith('/quotes')
+                      ? 'bg-primary-50 text-primary-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <ShoppingCart className="w-4 h-4" /> Quotes
+                </Link>
+
+                {/* Stores Module */}
+                <Link
+                  href={`/stores${query}`}
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    pathname?.startsWith('/stores')
+                      ? 'bg-primary-50 text-primary-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <MapPin className="w-4 h-4" /> Stores
                 </Link>
 
                 <Link
@@ -140,6 +165,17 @@ export default function AppShell({ children }: AppShellProps) {
                 {isAdmin && (
                   <>
                     <Link
+                      href={`/admin${query}`}
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        pathname?.startsWith('/admin')
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Settings className="w-4 h-4" /> Admin
+                    </Link>
+
+                    <Link
                       href={`/settings${query}`}
                       className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                         isActive('/settings')
@@ -147,29 +183,7 @@ export default function AppShell({ children }: AppShellProps) {
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
                     >
-                      <Settings className="w-4 h-4" /> Settings
-                    </Link>
-
-                    <Link
-                      href={`/database${query}`}
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        isActive('/database')
-                          ? 'bg-primary-50 text-primary-700 font-medium'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Database className="w-4 h-4" /> Database
-                    </Link>
-
-                    <Link
-                      href={`/team${query}`}
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        isActive('/team')
-                          ? 'bg-primary-50 text-primary-700 font-medium'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Users className="w-4 h-4" /> Team
+                      <Database className="w-4 h-4" /> Settings
                     </Link>
                   </>
                 )}
