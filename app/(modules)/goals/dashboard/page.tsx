@@ -56,7 +56,7 @@ export default function DashboardPage() {
   // Initialize data
   useEffect(() => {
     // Subscribe to Firebase Auth state and load data for the signed-in user
-    const unsubscribeAuth = onAuthStateChange(async (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChange(async (firebaseUser: any) => {
       console.log('[Dashboard] onAuthStateChange fired. user:', !!firebaseUser, firebaseUser?.email);
       if (!firebaseUser) {
         setUser(null);
@@ -96,7 +96,7 @@ export default function DashboardPage() {
         // If first login, force password change only for password-provider users
         if (userData.passwordChanged === false) {
           try {
-            const isPasswordProvider = !!auth.currentUser?.providerData?.some(p => p.providerId === 'password');
+            const isPasswordProvider = !!auth.currentUser?.providerData?.some((p: any) => p.providerId === 'password');
             if (isPasswordProvider) {
               window.location.href = '/change-password';
               return;
@@ -153,8 +153,8 @@ export default function DashboardPage() {
         if (goalsUnsubRef.current) { goalsUnsubRef.current(); }
         if (metricsUnsubRef.current) { metricsUnsubRef.current(); }
 
-        goalsUnsubRef.current = goalService.subscribeToGoals(userId, (updatedGoals) => {
-          setGoals(updatedGoals.filter(g => g.period === selectedPeriod));
+        goalsUnsubRef.current = goalService.subscribeToGoals(userId, (updatedGoals: Goal[]) => {
+          setGoals(updatedGoals.filter((g: Goal) => g.period === selectedPeriod));
         });
 
         metricsUnsubRef.current = metricService.subscribeToMetrics(userId, setMetrics);
@@ -230,15 +230,15 @@ export default function DashboardPage() {
           try {
             // Weekly progress
             const weekMetrics = await metricService.getMetrics(uid, goalType, weekStart, weekEnd);
-            weekly[goalType] = weekMetrics.reduce((sum, m) => sum + (m.value || 0), 0);
+            weekly[goalType] = weekMetrics.reduce((sum: number, m: any) => sum + (m.value || 0), 0);
             
             // Monthly progress
             const monthMetrics = await metricService.getMetrics(uid, goalType, monthStart, monthEnd);
-            monthly[goalType] = monthMetrics.reduce((sum, m) => sum + (m.value || 0), 0);
+            monthly[goalType] = monthMetrics.reduce((sum: number, m: any) => sum + (m.value || 0), 0);
             
             // Quarterly progress
             const quarterMetrics = await metricService.getMetrics(uid, goalType, quarterStart, quarterEnd);
-            quarterly[goalType] = quarterMetrics.reduce((sum, m) => sum + (m.value || 0), 0);
+            quarterly[goalType] = quarterMetrics.reduce((sum: number, m: any) => sum + (m.value || 0), 0);
           } catch (e) {
             weekly[goalType] = 0;
             monthly[goalType] = 0;
@@ -277,7 +277,7 @@ export default function DashboardPage() {
       if (goal) {
         await goalService.upsertGoal({
           ...goal,
-          current: goal.current + value
+          currentValue: (goal.currentValue || 0) + value
         });
       }
       
@@ -329,7 +329,7 @@ export default function DashboardPage() {
   }
 
   const avgProgress = goals.length > 0 
-    ? Math.round(goals.reduce((acc, g) => acc + (g.current / g.target * 100), 0) / goals.length)
+    ? Math.round(goals.reduce((acc, g) => acc + ((g.currentValue || 0) / (g.targetValue || 1) * 100), 0) / goals.length)
     : 0;
 
   return (
@@ -340,7 +340,7 @@ export default function DashboardPage() {
           {/* Left: User Info */}
           <div className="flex items-center gap-3">
             {user?.photoUrl ? (
-              <img src={user.photoUrl} alt={user.name} className="w-12 h-12 rounded-full" />
+              <img src={user.photoUrl} alt={user.name || ''} className="w-12 h-12 rounded-full" />
             ) : (
               <div className="w-12 h-12 bg-kanva-green rounded-full flex items-center justify-center text-white font-bold">
                 {user?.name?.charAt(0) || 'U'}
@@ -377,7 +377,7 @@ export default function DashboardPage() {
             {/* Quick Stats */}
             <div className="text-center">
               <p className="text-2xl font-bold text-kanva-green">
-                {goals.filter(g => g.current >= g.target).length}
+                {goals.filter(g => (g.currentValue || 0) >= (g.targetValue || 1)).length}
               </p>
               <p className="text-xs text-gray-500">Goals Met</p>
             </div>
@@ -421,8 +421,8 @@ export default function DashboardPage() {
           {(() => {
             const ws = goals.find(g => g.type === 'new_sales_wholesale');
             const ds = goals.find(g => g.type === 'new_sales_distribution');
-            const current = (ws?.current || 0) + (ds?.current || 0);
-            const target = (ws?.target || 0) + (ds?.target || 0);
+            const current = (ws?.currentValue || 0) + (ds?.currentValue || 0);
+            const target = (ws?.targetValue || 0) + (ds?.targetValue || 0);
             return (
               <div className="p-4 rounded-lg border">
                 <p className="text-sm text-gray-500">Total Sales</p>
@@ -438,8 +438,8 @@ export default function DashboardPage() {
             return (
               <div className="p-4 rounded-lg border">
                 <p className="text-sm text-gray-500">Emails</p>
-                <p className="text-2xl font-bold">{g?.current || 0}</p>
-                <p className="text-xs text-gray-500">of {g?.target || 0}</p>
+                <p className="text-2xl font-bold">{g?.currentValue || 0}</p>
+                <p className="text-xs text-gray-500">of {g?.targetValue || 0}</p>
               </div>
             );
           })()}
@@ -450,8 +450,8 @@ export default function DashboardPage() {
             return (
               <div className="p-4 rounded-lg border">
                 <p className="text-sm text-gray-500">Phone Calls</p>
-                <p className="text-2xl font-bold">{g?.current || 0}</p>
-                <p className="text-xs text-gray-500">of {g?.target || 0}</p>
+                <p className="text-2xl font-bold">{g?.currentValue || 0}</p>
+                <p className="text-xs text-gray-500">of {g?.targetValue || 0}</p>
               </div>
             );
           })()}
@@ -459,7 +459,7 @@ export default function DashboardPage() {
           {/* Leads */}
           {(() => {
             const leadGoals = goals.filter(g => g.type.startsWith('lead_progression_'));
-            const totalLeads = leadGoals.reduce((sum, g) => sum + (g.current || 0), 0);
+            const totalLeads = leadGoals.reduce((sum, g) => sum + (g.currentValue || 0), 0);
             return (
               <div className="p-4 rounded-lg border">
                 <p className="text-sm text-gray-500">Total Leads</p>
