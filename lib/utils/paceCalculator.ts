@@ -50,3 +50,35 @@ export function formatPaceValue(value: number, type: string): string {
   }
   return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
 }
+
+// Alias for formatPaceValue
+export const formatMetricValue = formatPaceValue;
+
+// Calculate pace percentage
+export function calculatePace(current: number, target: number, daysElapsed: number, totalDays: number): number {
+  if (target === 0 || totalDays === 0) return 0;
+  const expectedProgress = (daysElapsed / totalDays) * target;
+  if (expectedProgress === 0) return 0;
+  return (current / expectedProgress) * 100;
+}
+
+// Get pace color based on percentage
+export function getPaceColor(pacePercent: number): string {
+  if (pacePercent >= 100) return 'text-green-600';
+  if (pacePercent >= 80) return 'text-yellow-600';
+  return 'text-red-600';
+}
+
+// Get pace background color based on percentage
+export function getPaceBgColor(pacePercent: number): string {
+  if (pacePercent >= 100) return 'bg-green-100';
+  if (pacePercent >= 80) return 'bg-yellow-100';
+  return 'bg-red-100';
+}
+
+// Get pace icon based on percentage
+export function getPaceIcon(pacePercent: number): string {
+  if (pacePercent >= 100) return '🚀';
+  if (pacePercent >= 80) return '📈';
+  return '⚠️';
+}

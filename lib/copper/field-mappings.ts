@@ -71,3 +71,19 @@ export function extractCustomFieldValue(customFields: any[], fieldId: number): a
   const field = customFields.find(cf => cf.custom_field_definition_id === fieldId);
   return field?.value || null;
 }
+
+// Get opportunity stage ID by name
+export function getOpportunityStageId(stageName: string): number | null {
+  const stage = pipelineStages.opportunities.find(
+    s => s.name.toLowerCase() === stageName.toLowerCase()
+  );
+  return stage?.id || null;
+}
+
+// Get lead stage ID by name
+export function getLeadStageId(stageName: string): number | null {
+  const stage = pipelineStages.leads.find(
+    s => s.name.toLowerCase() === stageName.toLowerCase()
+  );
+  return stage?.id || null;
+}
