@@ -1,5 +1,90 @@
-// Commission Calculator Types
+// KanvaPortal Unified Types
 
+// ============================================
+// User & Auth Types
+// ============================================
+export interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  photoUrl?: string | null;
+  role: 'admin' | 'sales_manager' | 'rep' | 'sales';
+  copperId?: string;
+  passwordChanged?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================
+// Goals Tracker Types
+// ============================================
+export type GoalType = 'calls' | 'meetings' | 'demos' | 'sales' | 'revenue' | 'talk_time';
+export type GoalPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly';
+
+export interface Goal {
+  id: string;
+  userId: string;
+  type: GoalType;
+  period: GoalPeriod;
+  targetValue: number;
+  currentValue: number;
+  startDate: Date;
+  endDate: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Metric {
+  id: string;
+  userId: string;
+  type: GoalType;
+  value: number;
+  date: Date;
+  source?: string;
+  metadata?: Record<string, any>;
+  createdAt: Date;
+}
+
+// ============================================
+// Store Locator Types
+// ============================================
+export interface Store {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  lat: number;
+  lng: number;
+  isActive: boolean;
+  copperId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RetailerApplication {
+  id: string;
+  businessName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================
+// Commission Calculator Types
+// ============================================
 export interface Rep {
   id: string;
   name: string;
