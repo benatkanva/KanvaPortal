@@ -4,7 +4,6 @@ import React, { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { 
-  Calculator, 
   Settings, 
   Database, 
   FileText, 
@@ -15,7 +14,11 @@ import {
   Target,
   ShoppingCart,
   MapPin,
-  LayoutGrid
+  LayoutGrid,
+  DollarSign,
+  Building2,
+  UserPlus,
+  Kanban
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -101,18 +104,77 @@ export default function AppShell({ children }: AppShellProps) {
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <Home className="w-4 h-4" /> Dashboard
+                  <Home className="w-4 h-4" /> Feed
                 </Link>
 
+                {/* CRM Dropdown */}
+                <div className="relative group">
+                  <button
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      pathname?.startsWith('/prospects') || pathname?.startsWith('/contacts') || pathname?.startsWith('/accounts') || pathname?.startsWith('/customers')
+                        ? 'bg-primary-50 text-primary-700 font-medium'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Users className="w-4 h-4" /> CRM
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <Link
+                      href={`/prospects${query}`}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors first:rounded-t-lg ${
+                        pathname?.startsWith('/prospects')
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <UserPlus className="w-4 h-4" /> Prospects
+                    </Link>
+                    <Link
+                      href={`/contacts${query}`}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
+                        pathname?.startsWith('/contacts')
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Users className="w-4 h-4" /> Contacts
+                    </Link>
+                    <Link
+                      href={`/accounts${query}`}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
+                        pathname?.startsWith('/accounts')
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Building2 className="w-4 h-4" /> Accounts
+                    </Link>
+                    <Link
+                      href={`/customers${query}`}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors last:rounded-b-lg ${
+                        pathname?.startsWith('/customers')
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Building2 className="w-4 h-4" /> Customers (Legacy)
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Pipeline */}
                 <Link
-                  href={`/customers${query}`}
+                  href={`/pipelines${query}`}
                   className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    isActive('/customers')
+                    pathname?.startsWith('/pipelines')
                       ? 'bg-primary-50 text-primary-700 font-medium'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <Users className="w-4 h-4" /> Customers
+                  <Kanban className="w-4 h-4" /> Pipeline
                 </Link>
 
                 {/* Goals Module */}
@@ -127,9 +189,21 @@ export default function AppShell({ children }: AppShellProps) {
                   <Target className="w-4 h-4" /> Goals
                 </Link>
 
+                {/* Commissions Module */}
+                <Link
+                  href={`/commissions${query}`}
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    pathname?.startsWith('/commissions')
+                      ? 'bg-primary-50 text-primary-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <DollarSign className="w-4 h-4" /> Commissions
+                </Link>
+
                 {/* Quotes Module */}
                 <Link
-                  href="/quotes/index.html"
+                  href={`/quotes${query}`}
                   className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                     pathname?.startsWith('/quotes')
                       ? 'bg-primary-50 text-primary-700 font-medium'

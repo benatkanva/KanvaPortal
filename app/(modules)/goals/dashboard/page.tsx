@@ -10,6 +10,7 @@ import GoalCard from '@/components/molecules/GoalCard';
 import GoalGrid from '@/components/organisms/GoalGrid';
 import DailyPaceCard from '@/components/molecules/DailyPaceCard';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { eachDayOfInterval, subDays, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { 
@@ -340,7 +341,7 @@ export default function DashboardPage() {
           {/* Left: User Info */}
           <div className="flex items-center gap-3">
             {user?.photoUrl ? (
-              <img src={user.photoUrl} alt={user.name || ''} className="w-12 h-12 rounded-full" />
+              <Image src={user.photoUrl} alt={user.name || ''} width={48} height={48} className="w-12 h-12 rounded-full" unoptimized />
             ) : (
               <div className="w-12 h-12 bg-kanva-green rounded-full flex items-center justify-center text-white font-bold">
                 {user?.name?.charAt(0) || 'U'}

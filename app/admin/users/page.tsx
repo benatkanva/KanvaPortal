@@ -185,12 +185,18 @@ export default function AdminUsersPage() {
                   <tr key={u.id} className="border-b last:border-0">
                     <td className="py-2 pr-3">
                       <div className="flex items-center gap-2">
-                        <img 
-                          src={u.photoUrl || '/app_logo.png'} 
-                          alt={u.name || u.email}
-                          className="w-8 h-8 rounded-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).src = '/app_logo.png'; }}
-                        />
+                        {u.photoUrl ? (
+                          <img 
+                            src={u.photoUrl} 
+                            alt={u.name || u.email}
+                            className="w-8 h-8 rounded-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-kanva-green flex items-center justify-center text-white text-xs font-bold">
+                            {(u.name?.charAt(0) || u.email?.charAt(0) || 'U').toUpperCase()}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="py-2 pr-3">{u.email}</td>

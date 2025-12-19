@@ -64,45 +64,97 @@
             background: #e5e7eb;
             color: #4b5563;
         }
+        
+        /* Embedded mode styles - align with KanvaPortal design */
+        body {
+            background: transparent !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        .calculator-container {
+            background: transparent !important;
+            padding: 0 !important;
+            max-width: none !important;
+        }
+        
+        .card {
+            background: #fff;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            margin-bottom: 1rem;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+            border-radius: 0.75rem 0.75rem 0 0;
+        }
+        
+        .card-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #111827;
+            margin: 0;
+        }
+        
+        .card-body {
+            padding: 1.25rem;
+        }
+        
+        /* Form styling to match Next.js app */
+        input, select, textarea {
+            font-family: inherit;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+        
+        /* Button styling */
+        .btn {
+            font-family: inherit;
+            font-weight: 500;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .btn-primary {
+            background: #22c55e;
+            color: white;
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: #16a34a;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
     </style>
 </head>
 <body>
-    <!-- Loading State -->
-    <div id="loading" class="loading-overlay">
-        <div class="loading-container">
-            <div class="kanva-logo-loader">
-                <div class="logo-circle">
-                    <div class="logo-inner">
-                        <span class="logo-text">K</span>
-                    </div>
-                </div>
-                <div class="loading-dots">
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                </div>
-            </div>
-            <p class="loading-text">Loading Kanva Quote Calculator...</p>
-        </div>
-    </div>
-
     <!-- Main Calculator Container -->
-    <div id="app" class="calculator-container fade-in" style="display: none;">
-        
-        <!-- Header Section -->
-        <header class="app-header">
-            <div class="header-content">
-                <div class="brand-section">
-                    <img src="assets/logo/kanva-logo.png" alt="Kanva Botanicals" class="brand-logo">
-                </div>
-                <button id="shipstationOrdersBtn" class="btn btn-primary btn-sm" style="margin-right: 8px;" title="View ShipStation Orders">
-                    🚢 Orders
-                </button>
-                <button id="adminToggle" class="btn btn-secondary btn-sm" style="display: none;">
-                    Admin Panel
-                </button>
-            </div>
-        </header>
+    <div id="app" class="calculator-container fade-in">
         
         <!-- Customer Information Section -->
         <div class="card">

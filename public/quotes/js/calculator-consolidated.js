@@ -161,25 +161,104 @@ class KanvaCalculator {
     }
 
     /**
-     * Load products from Firebase
+     * Load products from Firebase and transform to calculator format
      */
     async loadProducts() {
         try {
             console.log('📦 Loading products from Firebase...');
-            const productsData = await window.firebaseDataService.getCollection('products');
             
-            if (!productsData || Object.keys(productsData).length === 0) {
-                console.warn('⚠️ No products found in Firebase, checking for sample data...');
-                // You might want to seed some sample data here
+            // Clear cache to ensure fresh data
+            if (window.firebaseDataService && window.firebaseDataService.clearCache) {
+                window.firebaseDataService.clearCache('products');
+                console.log('🧹 Cleared products cache');
+            }
+            
+            const rawProducts = await window.firebaseDataService.getCollection('products');
+            
+            // Debug: Log raw products from Firestore
+            console.log('📊 Raw products from Firestore:', Object.keys(rawProducts).length);
+            console.log('📊 Sample raw product:', Object.values(rawProducts)[0]);
+            
+            if (!rawProducts || Object.keys(rawProducts).length === 0) {
+                console.warn('⚠️ No products found in Firebase');
                 return {};
             }
             
-            console.log(`✅ Loaded ${Object.keys(productsData).length} products from Firebase`);
+            // Transform KanvaPortal product format to quotes calculator format
+            const productsData = this.transformProducts(rawProducts);
+            
+            console.log(`✅ Loaded and transformed ${Object.keys(productsData).length} products from Firebase`);
             return productsData;
         } catch (error) {
             console.error('❌ Error loading products:', error);
             throw error;
         }
+    }
+    
+    /**
+     * Transform KanvaPortal products to quotes calculator format
+     * KanvaPortal fields: productDescription, productNum, category, imageUrl, productType, isActive
+     * Calculator expects: name, description, image, category, distributionPrice, retailPrice, etc.
+     */
+    transformProducts(rawProducts) {
+        const transformed = {};
+        
+        Object.entries(rawProducts).forEach(([id, product]) => {
+            // Skip inactive products
+            if (product.isActive === false) {
+                return;
+            }
+            
+            // Use productNum as key if available, otherwise use document ID
+            const productKey = product.productNum || id;
+            
+            transformed[productKey] = {
+                id: id,
+                productId: product.productNum || id,
+                name: product.productDescription || product.name || 'Unnamed Product',
+                description: product.notes || product.productDescription || '',
+                category: (product.category || 'other').toLowerCase().replace(/\s+/g, '_'),
+                productType: product.productType || 'Unit',
+                image: product.imageUrl || null,
+                
+                // Pricing - use existing or defaults
+                // TODO: These should come from a pricing collection
+                distributionPrice: product.distributionPrice || product.price || 4.50,
+                retailPrice: product.retailPrice || product.msrp || 8.99,
+                
+                // Units configuration
+                unitsPerCase: product.unitsPerCase || this.getUnitsPerCase(product.productType),
+                unitsPerDisplayBox: product.unitsPerDisplayBox || 12,
+                
+                // Original fields preserved
+                productNum: product.productNum,
+                size: product.size,
+                uom: product.uom,
+                quarterlyBonusEligible: product.quarterlyBonusEligible || false,
+                isActive: product.isActive !== false,
+                
+                // Flags
+                isBestSeller: product.isBestSeller || false,
+                isNewProduct: product.isNewProduct || false
+            };
+        });
+        
+        console.log(`📦 Transformed ${Object.keys(transformed).length} products`);
+        return transformed;
+    }
+    
+    /**
+     * Get units per case based on product type
+     */
+    getUnitsPerCase(productType) {
+        const typeStr = (productType || '').toLowerCase();
+        if (typeStr.includes('master case') || typeStr.includes('mc')) {
+            return 144; // 12 display boxes x 12 units
+        }
+        if (typeStr.includes('display')) {
+            return 12;
+        }
+        return 144; // Default to master case
     }
 
     /**

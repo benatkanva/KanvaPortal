@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase/client';
+import { auth, onAuthStateChange } from '@/lib/firebase/client';
 
 type Stats = {
   totalCustomersWithActivity: number;
@@ -77,6 +77,9 @@ export default function SalesInsightsPage() {
   const [salesPersonFilter, setSalesPersonFilter] = useState<string>('');
   const [salesRepFilter, setSalesRepFilter] = useState<string>('');
   const [salesRepNameFilter, setSalesRepNameFilter] = useState<string>('');
+  
+  const [authReady, setAuthReady] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
 
   // Initialize date range on mount
   useEffect(() => {
@@ -84,14 +87,25 @@ export default function SalesInsightsPage() {
     setStartDate(start);
     setEndDate(end);
   }, []);
+  
+  // Wait for Firebase auth to restore session
+  useEffect(() => {
+    const unsub = onAuthStateChange((user: any) => {
+      setFirebaseUser(user || null);
+      setAuthReady(true);
+    });
+    return () => unsub();
+  }, []);
 
   const loadData = async () => {
     if (!startDate || !endDate) return;
+    if (!authReady) return; // Wait for auth state
+    
     setLoading(true);
     setError(null);
 
     try {
-      const currentUser = auth.currentUser;
+      const currentUser = auth.currentUser || firebaseUser;
       if (!currentUser) {
         setError('Not authenticated. Please log in.');
         setLoading(false);
@@ -131,11 +145,11 @@ export default function SalesInsightsPage() {
   };
 
   useEffect(() => {
-    if (startDate && endDate) {
+    if (startDate && endDate && authReady) {
       loadData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate]);
+  }, [startDate, endDate, authReady]);
 
   const handlePresetChange = (p: DatePreset) => {
     setPreset(p);

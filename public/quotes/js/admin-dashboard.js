@@ -21,6 +21,9 @@ class AdminDashboard {
         this.loginModal = null;
         this.connectionData = {}; // Store real connection data
         
+        // Detect if running in embedded mode (iframe in KanvaPortal)
+        this.isEmbedded = this.detectEmbeddedMode();
+        
         // Git integration is deprecated; ensure connector is null
         this.gitConnector = null;
         
@@ -28,11 +31,36 @@ class AdminDashboard {
         this.adminEmails = [];
         this.defaultPassword = 'K@nva2025'; // Default password for all admin emails
         
-        // Load admin emails and connection data
-        this.loadAdminEmails();
-        this.loadConnectionData();
+        // Only load from server if not embedded
+        if (!this.isEmbedded) {
+            this.loadAdminEmails();
+            this.loadConnectionData();
+        } else {
+            // Use defaults in embedded mode
+            this.adminEmails = ['ben@kanvabotanicals.com'];
+            console.log('📦 Running in embedded mode - skipping server API calls');
+        }
         
         console.log('🎛️ AdminDashboard instance created');
+    }
+    
+    /**
+     * Detect if running inside an iframe (embedded in KanvaPortal)
+     */
+    detectEmbeddedMode() {
+        try {
+            return window.self !== window.top;
+        } catch (e) {
+            return true; // If we can't access top, we're in a cross-origin iframe
+        }
+    }
+    
+    /**
+     * Check if admin dashboard should be disabled
+     * When embedded in KanvaPortal, admin features are available in the main Admin tab
+     */
+    shouldDisableAdmin() {
+        return this.isEmbedded;
     }
 
     /**
@@ -349,6 +377,13 @@ class AdminDashboard {
     init() {
         if (this.isInitialized) {
             console.log('⚠️ AdminDashboard already initialized, skipping...');
+            return;
+        }
+        
+        // Skip admin UI when embedded in KanvaPortal - use main Admin tab instead
+        if (this.shouldDisableAdmin()) {
+            console.log('📦 Admin Dashboard disabled in embedded mode - use KanvaPortal Admin tab');
+            this.isInitialized = true;
             return;
         }
         

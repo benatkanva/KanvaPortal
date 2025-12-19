@@ -78,8 +78,20 @@ export default function AdminGoalsPage() {
   const loadTeamData = async () => {
     setLoading(true);
     try {
+      // Get auth token for API call
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Not authenticated');
+      }
+      const token = await currentUser.getIdToken();
+      
       // Fetch all users
-      const response = await fetch('/api/admin/users', { cache: 'no-store' });
+      const response = await fetch('/api/admin/users', { 
+        cache: 'no-store',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch users');
       
       const data = await response.json();
@@ -133,14 +145,22 @@ export default function AdminGoalsPage() {
 
     setSaving(true);
     try {
+      // Get auth token
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Not authenticated');
+      const token = await currentUser.getIdToken();
+
       // Save each goal
       const promises = goalTypes.map(async (type) => {
         const target = editingGoals[type];
-        if (target > 0) {
+        if (target >= 0) {
           // Create or update goal
           const response = await fetch('/api/admin/goals', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({
               userId: selectedMember,
               type,
@@ -173,10 +193,18 @@ export default function AdminGoalsPage() {
 
     setSaving(true);
     try {
+      // Get auth token
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Not authenticated');
+      const token = await currentUser.getIdToken();
+
       const promises = teamMembers.map(member =>
         fetch('/api/admin/goals/bulk', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             userId: member.userId,
             period: selectedPeriod,

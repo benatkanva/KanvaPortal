@@ -2789,9 +2789,14 @@ export default function SettingsPage() {
                 <ArrowLeft className="w-6 h-6" />
               </button>
               <SettingsIcon className="w-8 h-8 text-primary-600 mr-3" />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Commission Settings</h1>
-                <p className="text-sm text-gray-600">Configure buckets, weights, and goals</p>
+              <div className="flex items-center gap-3">
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Commission Settings</h1>
+                  <p className="text-sm text-gray-600">Configure buckets, weights, and goals</p>
+                </div>
+                <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                  Commission Calculator
+                </span>
               </div>
             </div>
             

@@ -322,6 +322,44 @@ service cloud.firestore {
       allow write: if true;
     }
     
+    // ========== CRM COLLECTIONS ==========
+    
+    // Prospects (leads/potential customers)
+    match /prospects/{prospectId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Contacts (people associated with accounts)
+    match /contacts/{contactId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Accounts (companies/businesses)
+    match /accounts/{accountId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Pipelines (sales pipelines with stages)
+    match /pipelines/{pipelineId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Pipeline deals (opportunities in pipeline stages)
+    match /pipeline_deals/{dealId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Activities (calls, emails, meetings, notes)
+    match /crm_activities/{activityId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
     // ========== SPIFFS & KICKERS ==========
     
     // Spiffs/Kickers - internal app - permissive for admin access

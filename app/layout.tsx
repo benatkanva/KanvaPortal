@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import AppShell from '@/components/templates/AppShell';
 import { AuthProvider } from '@/lib/contexts/AuthContext';
+import { QueryProvider } from '@/lib/providers/QueryProvider';
 import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -24,11 +25,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 text-gray-900`}>
-        <AuthProvider>
-          <AppShell>
-            {children}
-          </AppShell>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <AppShell>
+              {children}
+            </AppShell>
+          </AuthProvider>
+        </QueryProvider>
         <Toaster
           position="top-right"
           toastOptions={{
