@@ -1,0 +1,275 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { adminDb } from '@/lib/firebase/admin';
+import { Timestamp } from 'firebase-admin/firestore';
+import * as XLSX from 'xlsx';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes
+
+interface ImportStats {
+  processed: number;
+  customersNotFound: number;
+  customersCreated: number;
+  ordersCreated: number;
+  ordersUpdated: number;
+  ordersUnchanged: number;
+  itemsCreated: number;
+  itemsUpdated: number;
+  itemsUnchanged: number;
+  skipped: number;
+}
+
+// Safe number parsing
+function safeParseNumber(val: any): number {
+  if (val === null || val === undefined || val === '') return 0;
+  const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+  return isNaN(num) ? 0 : num;
+}
+
+// Parse dates from various formats
+function parseDate(val: any): Date | null {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val === 'number') {
+    // Excel serial date
+    const date = XLSX.SSF.parse_date_code(val);
+    if (date) return new Date(date.y, date.m - 1, date.d);
+  }
+  const parsed = new Date(val);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { importId } = await req.json();
+    
+    if (!importId) {
+      return NextResponse.json({ error: 'importId is required' }, { status: 400 });
+    }
+    
+    console.log(`📥 Starting processing for import: ${importId}`);
+    
+    // Get the pending import
+    const pendingDoc = await adminDb.collection('import_pending').doc(importId).get();
+    
+    if (!pendingDoc.exists) {
+      return NextResponse.json({ error: 'Import not found or already processed' }, { status: 404 });
+    }
+    
+    const pendingData = pendingDoc.data();
+    if (!pendingData?.fileId) {
+      return NextResponse.json({ error: 'No file reference found' }, { status: 400 });
+    }
+    
+    const fileId = pendingData.fileId;
+    const totalChunks = pendingData.totalChunks || 0;
+    const filename = pendingData.filename || 'unknown.csv';
+    
+    console.log(`📦 Loading ${totalChunks} chunks for fileId: ${fileId}`);
+    
+    // Load all chunks from Firestore
+    const chunksSnap = await adminDb.collection('import_chunks')
+      .where('fileId', '==', fileId)
+      .get();
+    
+    if (chunksSnap.empty) {
+      return NextResponse.json({ error: 'No chunks found' }, { status: 404 });
+    }
+    
+    // Reassemble buffer from chunks
+    const chunkData: string[] = new Array(totalChunks);
+    chunksSnap.forEach(doc => {
+      const data = doc.data();
+      chunkData[data.chunkIndex] = data.data;
+    });
+    
+    const buffers = chunkData.map(b64 => Buffer.from(b64, 'base64'));
+    const buffer = Buffer.concat(buffers);
+    
+    console.log(`📄 Reassembled file: ${buffer.length} bytes from ${chunksSnap.size} chunks`);
+    
+    // Clean up chunks
+    const cleanupBatch = adminDb.batch();
+    chunksSnap.forEach(doc => cleanupBatch.delete(doc.ref));
+    await cleanupBatch.commit();
+    console.log('🗑️ Cleaned up chunks');
+    
+    console.log(`📄 Processing file: ${filename} (${buffer.length} bytes)`);
+    
+    // Parse file first to get row count
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[];
+    
+    console.log(`✅ Found ${data.length} rows to process`);
+    
+    // Update status to processing with total rows
+    const progressRef = adminDb.collection('import_progress').doc(importId);
+    await progressRef.update({
+      status: 'processing',
+      totalRows: data.length,
+      updatedAt: Timestamp.now()
+    });
+    
+    // Return immediately - client will poll for progress
+    // Processing continues in background (best effort on serverless)
+    const responsePromise = NextResponse.json({
+      success: true,
+      importId: importId,
+      message: 'Processing started - poll /api/fishbowl/import-progress for status',
+      totalRows: data.length,
+      polling: true
+    });
+    
+    // Start processing in parallel (fire and forget)
+    processDataInBackground(data, importId, pendingDoc.ref, progressRef).catch(err => {
+      console.error('Background processing error:', err);
+      progressRef.update({
+        status: 'error',
+        error: err.message || 'Processing failed',
+        updatedAt: Timestamp.now()
+      }).catch(() => {});
+    });
+    
+    return responsePromise;
+    
+  } catch (error: any) {
+    console.error('❌ Processing error:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Processing failed' 
+    }, { status: 500 });
+  }
+}
+
+// Background processing function
+async function processDataInBackground(
+  data: Record<string, any>[],
+  importId: string,
+  pendingDocRef: FirebaseFirestore.DocumentReference,
+  progressRef: FirebaseFirestore.DocumentReference
+) {
+  console.log(`📦 Starting background processing of ${data.length} rows...`);
+  
+  const stats: ImportStats = {
+    processed: 0,
+    customersNotFound: 0,
+    customersCreated: 0,
+    ordersCreated: 0,
+    ordersUpdated: 0,
+    ordersUnchanged: 0,
+    itemsCreated: 0,
+    itemsUpdated: 0,
+    itemsUnchanged: 0,
+    skipped: 0
+  };
+  
+  const BATCH_SIZE = 450;
+  let batch = adminDb.batch();
+  let batchCount = 0;
+  const processedOrders = new Set<string>();
+  const processedCustomers = new Set<string>();
+  
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    stats.processed++;
+    
+    // Extract fields - using Conversite export column names
+    const soNum = String(row['Sales order Number'] ?? row['Sales Order Number'] ?? '').trim();
+    const salesOrderId = row['Sales Order ID'] || row['SO ID'];
+    const lineItemId = row['SO Item ID'] || row['SO item ID'];
+    const customerId = String(row['Account ID'] || row['Account id'] || row['Customer id'] || '').trim();
+    const customerName = String(row['Customer Name'] || row['Customer'] || '').trim();
+    
+    if (!soNum || !customerId || !salesOrderId || !lineItemId) {
+      stats.skipped++;
+      continue;
+    }
+    
+    // Upsert customer (once per customer in this batch)
+    if (!processedCustomers.has(customerId)) {
+      const customerRef = adminDb.collection('fishbowl_customers').doc(customerId);
+      batch.set(customerRef, {
+        id: customerId,
+        name: customerName,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+      batchCount++;
+      stats.customersCreated++;
+      processedCustomers.add(customerId);
+    }
+    
+    // Upsert order (once per SO)
+    if (!processedOrders.has(soNum)) {
+      const orderRef = adminDb.collection('fishbowl_sales_orders').doc(soNum);
+      batch.set(orderRef, {
+        soNumber: soNum,
+        customerId: customerId,
+        customerName: customerName,
+        dateScheduled: parseDate(row['Date Scheduled']),
+        salesperson: String(row['Salesperson'] || '').trim(),
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+      batchCount++;
+      stats.ordersCreated++;
+      processedOrders.add(soNum);
+    }
+    
+    // Process line item
+    const itemId = String(lineItemId);
+    const itemRef = adminDb.collection('fishbowl_soitems').doc(itemId);
+    
+    batch.set(itemRef, {
+      soNumber: soNum,
+      soItemId: lineItemId,
+      customerId: customerId,
+      customerName: customerName,
+      product: String(row['SO Item Product Number'] || row['Part Description'] || row['Product'] || '').trim(),
+      quantity: safeParseNumber(row['Qty Fulfilled'] || row['Qty'] || row['Quantity']),
+      unitPrice: safeParseNumber(row['Product Price'] || row['Unit Price'] || row['Price']),
+      totalPrice: safeParseNumber(row['Total Price'] || row['Total']),
+      dateScheduled: parseDate(row['Date Scheduled']),
+      updatedAt: Timestamp.now()
+    }, { merge: true });
+    batchCount++;
+    stats.itemsCreated++;
+    
+    // Commit batch periodically
+    if (batchCount >= BATCH_SIZE) {
+      await batch.commit();
+      batch = adminDb.batch();
+      batchCount = 0;
+      
+      // Update progress
+      const pct = Math.round((i / data.length) * 100);
+      await progressRef.update({
+        currentRow: i,
+        percentage: pct,
+        stats: stats,
+        updatedAt: Timestamp.now()
+      });
+      console.log(`📊 Progress: ${i}/${data.length} (${pct}%)`);
+    }
+  }
+  
+  // Commit final batch
+  if (batchCount > 0) {
+    await batch.commit();
+  }
+  
+  // Mark complete
+  await progressRef.update({
+    status: 'complete',
+    currentRow: data.length,
+    percentage: 100,
+    stats: stats,
+    completedAt: Timestamp.now(),
+    updatedAt: Timestamp.now()
+  });
+  
+  // Clean up pending import
+  await pendingDocRef.delete();
+  
+  console.log('✅ Background import complete:', stats);
+}

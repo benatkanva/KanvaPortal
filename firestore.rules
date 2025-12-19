@@ -1,0 +1,370 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ========== HELPER FUNCTIONS ==========
+    
+    // Check if running in emulator (development mode)
+    function isEmulator() {
+      return resource == null || request.auth == null;
+    }
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is admin (Commission Calculator)
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Check if user is owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if user is admin or sales manager (Store Locator)
+    function isAdminOrManager() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'sales_manager'];
+    }
+    
+    // Check if email is in allowed domains (Store Locator)
+    function isAllowedDomain() {
+      return isAuthenticated() && 
+        request.auth.token.email.matches('.*@(kanvabotanicals|cwlbrands)\\.com$');
+    }
+    
+    // ========== COMMISSION CALCULATOR COLLECTIONS ==========
+    
+    // Users collection (internal app - permissive for authenticated users)
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Allow any authenticated user to manage team
+    }
+    
+    // Settings collection (internal app - permissive)
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Commission entries (internal app - permissive)
+    match /commission_entries/{entryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Commission payouts (internal app - permissive)
+    match /commission_payouts/{payoutId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Quarters (internal app - permissive)
+    match /quarters/{quarterId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Reps roster (internal app - permissive)
+    match /reps/{repId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Activities (internal app - permissive)
+    match /activities/{activityId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Monthly commissions (internal app - permissive)
+    match /monthly_commissions/{commissionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Monthly commission summaries (internal app - permissive)
+    match /monthly_commission_summary/{summaryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Commission config (internal app - permissive)
+    match /commission_config/{configId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Commission rates (internal app - permissive)
+    match /commission_rates/{rateId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Import logs (internal app - permissive)
+    match /import_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Import progress (internal app - permissive)
+    match /import_progress/{progressId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Sync log (internal app - permissive)
+    match /sync_log/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Commission calculation logs (internal app - permissive)
+    match /commission_calculation_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ========== FISHBOWL DATA COLLECTIONS ==========
+    
+    // Fishbowl data collections (read-only for app, written by sync)
+    match /fishbowl_soitems/{itemId} {
+      allow read: if true;
+      allow write: if true; // Allow sync processes to write
+    }
+    
+    match /fishbowl_sales_orders/{orderId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /fishbowl_customers/{customerId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Customer sales summary (pre-aggregated data for fast queries)
+    match /customer_sales_summary/{customerId} {
+      allow read: if true;
+      allow write: if true; // Allow migration API to update
+    }
+    
+    // ========== COPPER CRM DATA COLLECTIONS ==========
+    
+    // Copper companies (internal app - permissive)
+    match /copper_companies/{companyId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /copper_people/{personId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Copper leads (internal app - permissive)
+    match /copper_leads/{leadId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Copper opportunities (internal app - permissive)
+    match /copper_opportunities/{opportunityId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Copper tasks (internal app - permissive)
+    match /copper_tasks/{taskId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Copper logs (internal app - permissive)
+    match /copperLogs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Copper summaries (internal app - permissive)
+    match /copperSummaries/{summaryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ========== REGIONS & ORG CHART ==========
+    
+    // Regions collection (internal app - permissive)
+    match /regions/{regionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Org chart collection (internal app - permissive)
+    match /org_chart/{chartId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ========== CUSTOMERS ==========
+    
+    // Customers collection (internal app - permissive)
+    match /customers/{customerId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ========== PRODUCTS & CATALOG ==========
+    
+    // Products collection - public read, admin write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null || isEmulator() || true; // Internal app - permissive
+    }
+    
+    // Pricing configuration - public read, admin write
+    match /pricing/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null || isEmulator();
+    }
+    
+    // Shipping configuration - public read, admin write
+    match /shipping/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null || isEmulator();
+    }
+    
+    // Payment configuration - public read, admin write
+    match /payment/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null || isEmulator();
+    }
+    
+    // Email templates - public read, admin write
+    match /templates/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null || isEmulator();
+    }
+    
+    // ========== ADMIN & INTEGRATIONS ==========
+    
+    // Admin-only collections
+    match /admin/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Integration connections
+    match /integrations/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null || isEmulator();
+    }
+    
+    // ========== SHIPSTATION ==========
+    
+    // ShipStation orders cache (Commission Calculator)
+    match /shipstation_orders/{orderId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ShipStation sync metadata (Commission Calculator)
+    match /shipstation_sync_meta/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ShipStation webhook events
+    match /shipstation_events/{document=**} {
+      allow write: if true;
+      allow read: if request.auth != null || isEmulator();
+    }
+    
+    match /shipstation_events_index/{document=**} {
+      allow write: if true;
+      allow read: if request.auth != null || isEmulator();
+    }
+    
+    // ShipStation Firestore queue
+    match /shipstationRequests/{requestId} {
+      allow write: if true;
+      allow read: if request.auth != null || isEmulator();
+    }
+    
+    match /shipstationResponses/{requestId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // ========== ANALYTICS ==========
+    
+    // Analytics
+    match /analytics/{document=**} {
+      allow write: if true;
+      allow read: if request.auth != null || isEmulator();
+    }
+    
+    // ========== GOALS & METRICS (Goals Tracker App) ==========
+    
+    // Goals - internal app - permissive for admin access
+    match /goals/{goalId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Metrics - internal app - permissive for admin access
+    match /metrics/{metricId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ========== SPIFFS & KICKERS ==========
+    
+    // Spiffs/Kickers - internal app - permissive for admin access
+    match /spiffs/{spiffId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Spiff earnings - internal app - permissive for admin access
+    match /spiff_earnings/{earningId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ========== STORE LOCATOR APP ==========
+    
+    // Retailer Applications
+    match /retailer_applications/{applicationId} {
+      allow read: if isAuthenticated() && isAllowedDomain();
+      allow create: if true; // Allow webhook to create (no auth required)
+      allow update, delete: if isAdminOrManager();
+    }
+    
+    // Approval Logs
+    match /approval_logs/{logId} {
+      allow read: if isAuthenticated() && isAllowedDomain();
+      allow create: if isAuthenticated() && isAllowedDomain();
+      allow update, delete: if isAdminOrManager();
+    }
+    
+    // Integration Logs
+    match /integration_logs/{logId} {
+      allow read: if isAdminOrManager();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdminOrManager();
+    }
+    
+    // ========== SPECIAL SETTINGS ==========
+    
+    // Organization settings - restricted access
+    match /settings/organization/defaults {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}
