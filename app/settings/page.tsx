@@ -64,14 +64,14 @@ function SettingsPageContent() {
   const [saving, setSaving] = useState(false);
   const [selectedQuarter, setSelectedQuarter] = useState('Q4 2025');
   const [quarters, setQuarters] = useState<string[]>(['Q4 2025', 'Q1 2026']);
-  const [activeTab, setActiveTab] = useState<'rules' | 'datasync' | 'customers' | 'team' | 'orgchart' | 'products'>('rules');
+  const [activeTab, setActiveTab] = useState<'rules' | 'datasync' | 'customers' | 'products'>('rules');
   const [rulesSubTab, setRulesSubTab] = useState<'quarterly' | 'monthly'>('quarterly');
 
   // Handle tab parameter from URL
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['rules', 'datasync', 'customers', 'team', 'orgchart', 'products'].includes(tabParam)) {
-      setActiveTab(tabParam as 'rules' | 'datasync' | 'customers' | 'team' | 'orgchart' | 'products');
+    if (tabParam && ['rules', 'datasync', 'customers', 'products'].includes(tabParam)) {
+      setActiveTab(tabParam as 'rules' | 'datasync' | 'customers' | 'products');
     }
   }, [searchParams]);
 
@@ -79,8 +79,6 @@ function SettingsPageContent() {
   const isRulesTab = activeTab === 'rules';
   const isDataSyncTab = activeTab === 'datasync';
   const isCustomersTab = activeTab === 'customers';
-  const isTeamTab = activeTab === 'team';
-  const isOrgChartTab = activeTab === 'orgchart';
   const isProductsTab = activeTab === 'products';
 
   // Configuration state
@@ -496,13 +494,6 @@ function SettingsPageContent() {
     }
   }, [activeTab, isAdmin]);
 
-  // Load reps when Sales Team tab is active
-  useEffect(() => {
-    if (activeTab === 'team' && isAdmin) {
-      console.log('Loading reps for Sales Team tab...');
-      loadSettings();
-    }
-  }, [activeTab, isAdmin, loadSettings]);
 
   // Load commission rates when title changes
   useEffect(() => {

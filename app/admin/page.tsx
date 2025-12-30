@@ -14,8 +14,10 @@ import JustCallTab from '@/components/admin/JustCallTab';
 import AdminUtilitiesTab from '@/components/admin/AdminUtilitiesTab';
 import FishbowlTab from '@/components/admin/FishbowlTab';
 import SettingsTab from '@/components/admin/SettingsTab';
+import SalesTeamTab from '@/app/settings/SalesTeamTab';
+import OrgChartTab from '@/app/settings/OrgChartTab';
 
-type TabType = 'overview' | 'goals' | 'copper' | 'sync' | 'justcall' | 'fishbowl' | 'settings' | 'utilities';
+type TabType = 'overview' | 'users' | 'team' | 'organization' | 'goals' | 'copper' | 'sync' | 'justcall' | 'fishbowl' | 'settings' | 'utilities';
 
 // Tab groups for organization
 const tabGroups = [
@@ -23,6 +25,14 @@ const tabGroups = [
     label: 'Overview',
     tabs: [
       { id: 'overview' as TabType, label: 'Dashboard', icon: BarChart3 },
+    ]
+  },
+  {
+    label: 'User Management',
+    tabs: [
+      { id: 'users' as TabType, label: 'Users', icon: Users },
+      { id: 'team' as TabType, label: 'Sales Team', icon: Users },
+      { id: 'organization' as TabType, label: 'Organization', icon: Target },
     ]
   },
   {
@@ -143,6 +153,25 @@ export default function AdminPage() {
           </div>
         </div>
 
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-5 border border-orange-200">
+          <h3 className="font-semibold text-orange-800 mb-3 flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            User Management
+          </h3>
+          <p className="text-sm text-orange-700 mb-3">Manage users, sales team, and organizational structure.</p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setActiveTab('users')} className="text-xs bg-white px-3 py-1.5 rounded-lg text-orange-700 hover:bg-orange-50 border border-orange-200">
+              Users
+            </button>
+            <button onClick={() => setActiveTab('team')} className="text-xs bg-white px-3 py-1.5 rounded-lg text-orange-700 hover:bg-orange-50 border border-orange-200">
+              Sales Team
+            </button>
+            <button onClick={() => setActiveTab('organization')} className="text-xs bg-white px-3 py-1.5 rounded-lg text-orange-700 hover:bg-orange-50 border border-orange-200">
+              Organization
+            </button>
+          </div>
+        </div>
+
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
           <h3 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
             <Settings className="w-5 h-5" />
@@ -156,20 +185,17 @@ export default function AdminPage() {
             <button onClick={() => setActiveTab('utilities')} className="text-xs bg-white px-3 py-1.5 rounded-lg text-purple-700 hover:bg-purple-50 border border-purple-200">
               Admin Tools
             </button>
-            <Link href="/admin/users" className="text-xs bg-white px-3 py-1.5 rounded-lg text-purple-700 hover:bg-purple-50 border border-purple-200">
-              User Management
-            </Link>
           </div>
         </div>
       </div>
 
-      {/* App-Specific Settings Notice */}
+      {/* Commission Settings Notice */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <h4 className="font-medium text-amber-800 mb-2">📋 App-Specific Settings</h4>
+        <h4 className="font-medium text-amber-800 mb-2">💰 Commission Settings</h4>
         <p className="text-sm text-amber-700">
-          <strong>Commission Calculator settings</strong> (rules, customers, sales team, products for commissions) 
-          are managed in the <Link href="/settings" className="underline font-medium hover:text-amber-900">Settings page</Link>.
-          This Admin panel is for <strong>portal-wide administration</strong> and integrations.
+          <strong>Commission-specific settings</strong> (commission rates, rules, customers, products) 
+          are managed in the <Link href="/settings" className="underline font-medium hover:text-amber-900">Commission Settings page</Link>.
+          <strong> User management</strong> (sales team, organization) is now centralized here in Admin.
         </p>
       </div>
     </div>
@@ -230,6 +256,17 @@ export default function AdminPage() {
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'overview' && <OverviewDashboard />}
+          {activeTab === 'users' && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">User Management</h2>
+              <p className="text-gray-600 mb-4">Basic user creation and authentication management. For commission and organizational settings, use the Sales Team and Organization tabs.</p>
+              <Link href="/admin/users" className="btn btn-primary">
+                Go to User Management →
+              </Link>
+            </div>
+          )}
+          {activeTab === 'team' && <SalesTeamTab isAdmin={true} />}
+          {activeTab === 'organization' && <OrgChartTab isAdmin={true} />}
           {activeTab === 'goals' && <TeamGoalsTab />}
           {activeTab === 'copper' && <CopperMetadataTab />}
           {activeTab === 'sync' && <DataSyncTab />}
