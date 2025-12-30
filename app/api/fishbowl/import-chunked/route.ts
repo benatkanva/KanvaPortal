@@ -441,7 +441,7 @@ async function importUnifiedReport(buffer: Buffer, filename: string, importId: s
       const orderRef = adminDb.collection('fishbowl_sales_orders').doc(orderDocId);
       const sanitizedCustomerId = String(customerId).replace(/[\/\\]/g, '_').trim();
 
-      const rawDate = row['Date fulfillment'] ?? row['Date fulfilled'] ?? row['Fulfilment Date'] ?? row['Issued date'] ?? row['Issued Date'] ?? row['Date created'];
+      const rawDate = row['Issued date'] ?? row['Issued Date'] ?? row['Date fulfillment'] ?? row['Date fulfilled'] ?? row['Fulfilment Date'];
       const { date: postDate, monthKey, y } = parseExcelOrTextDate(rawDate);
       const postingDate = postDate ? Timestamp.fromDate(postDate) : null;
       const commissionMonth = monthKey ?? '';
@@ -532,7 +532,7 @@ async function importUnifiedReport(buffer: Buffer, filename: string, importId: s
     const itemRef = adminDb.collection('fishbowl_soitems').doc(itemDocId);
     const sanitizedCustomerId2 = String(customerId).replace(/[\/\\]/g, '_').trim();
 
-    const rawDate2 = row['Date fulfillment'] ?? row['Date fulfilled'] ?? row['Fulfilment Date'] ?? row['Issued date'] ?? row['Issued Date'] ?? row['Date created'];
+    const rawDate2 = row['Issued date'] ?? row['Issued Date'] ?? row['Date fulfillment'] ?? row['Date fulfilled'] ?? row['Fulfilment Date'];
     const { date: postDate2, monthKey: monthKey2, y: y2 } = parseExcelOrTextDate(rawDate2);
     const postingDate2 = postDate2 ? Timestamp.fromDate(postDate2) : null;
     const commissionMonth2 = monthKey2 ?? '';
