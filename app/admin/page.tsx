@@ -6,16 +6,6 @@ import { userService } from '@/lib/firebase/services';
 import Link from 'next/link';
 import { Settings, Users, Target, Database, Phone, FileText, DollarSign, Sliders, Plug, BarChart3, Wrench } from 'lucide-react';
 
-// Import tab components
-import TeamGoalsTab from '@/components/admin/TeamGoalsTab';
-import CopperMetadataTab from '@/components/admin/CopperMetadataTab';
-import DataSyncTab from '@/components/admin/DataSyncTab';
-import JustCallTab from '@/components/admin/JustCallTab';
-import AdminUtilitiesTab from '@/components/admin/AdminUtilitiesTab';
-import FishbowlTab from '@/components/admin/FishbowlTab';
-import SettingsTab from '@/components/admin/SettingsTab';
-import SalesTeamTab from '@/app/settings/SalesTeamTab';
-import OrgChartTab from '@/app/settings/OrgChartTab';
 
 export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
