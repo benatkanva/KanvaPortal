@@ -46,8 +46,6 @@ import CustomersTab from './CustomersTab';
 import RulesTab from './RulesTab';
 import ProductsTab from './ProductsTab';
 import DataSyncTab from './DataSyncTab';
-import SalesTeamTab from './SalesTeamTab';
-import OrgChartTab from './OrgChartTab';
 import { CommissionConfig, CommissionBucket, ProductSubGoal, ActivitySubGoal, RoleCommissionScale, RepRole, CommissionEntry } from '@/types';
 import { validateWeightsSum, calculatePayout, formatCurrency, formatAttainment } from '@/lib/commission/calculator';
 import MonthYearModal from '@/components/MonthYearModal';
