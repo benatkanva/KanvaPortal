@@ -243,47 +243,65 @@ export function TopProductsWidget({
         }
       });
 
-      // Query line items
+      // Query line items - OPTIMIZED: Single batch query instead of N+1
       const productMap = new Map<string, ProductPerformance>();
       
-      // For each order, get line items and calculate actual commission per product
-      for (const orderNum of orderNums) {
+      // Batch query all line items for all orders at once (max 30 orders per query due to Firestore 'in' limit)
+      const orderNumsArray = Array.from(orderNums);
+      const allItems: Array<any> = [];
+      
+      // Process in batches of 30 (Firestore 'in' operator limit)
+      for (let i = 0; i < orderNumsArray.length; i += 30) {
+        const batch = orderNumsArray.slice(i, i + 30);
         const itemsQuery = query(
           collection(db, 'fishbowl_soitems'),
-          where('salesOrderNum', '==', orderNum)
+          where('salesOrderNum', 'in', batch)
         );
         
         const itemsSnap = await getDocs(itemsQuery);
+        itemsSnap.forEach(doc => allItems.push(doc.data()));
+      }
+      
+      console.log(`📦 Loaded ${allItems.length} line items for ${orderNumsArray.length} orders`);
+      
+      // Group items by order and calculate order totals
+      const orderItemsMap = new Map<string, Array<{productNum: string; revenue: number; quantity: number; productName: string}>>();
+      const orderTotalsMap = new Map<string, number>();
+      
+      allItems.forEach(data => {
+        const orderNum = data.salesOrderNum;
+        if (!orderNum) return;
         
-        // Calculate total revenue for this order to prorate commission
-        let orderTotalRevenue = 0;
-        const orderItems: Array<{productNum: string; revenue: number; quantity: number; productName: string}> = [];
+        const productName = (data.product || data.description || '').toLowerCase();
         
-        itemsSnap.forEach(doc => {
-          const data = doc.data();
-          const productName = (data.product || data.description || '').toLowerCase();
-          
-          // Skip shipping and CC processing
-          if (productName.includes('shipping') || productName.includes('cc processing')) {
-            return;
-          }
-          
-          const revenue = Number(data.revenue) || 0;
-          orderTotalRevenue += revenue;
-          
-          orderItems.push({
-            productNum: data.partNumber || data.productNum || 'Unknown',
-            revenue,
-            quantity: Number(data.quantity) || 0,
-            productName: data.product || data.description || 'Unknown'
-          });
+        // Skip shipping and CC processing
+        if (productName.includes('shipping') || productName.includes('cc processing')) {
+          return;
+        }
+        
+        const revenue = Number(data.revenue) || 0;
+        
+        if (!orderItemsMap.has(orderNum)) {
+          orderItemsMap.set(orderNum, []);
+          orderTotalsMap.set(orderNum, 0);
+        }
+        
+        orderItemsMap.get(orderNum)!.push({
+          productNum: data.partNumber || data.productNum || 'Unknown',
+          revenue,
+          quantity: Number(data.quantity) || 0,
+          productName: data.product || data.description || 'Unknown'
         });
         
-        // Get actual commission for this order
+        orderTotalsMap.set(orderNum, orderTotalsMap.get(orderNum)! + revenue);
+      });
+      
+      // Calculate product performance with prorated commissions
+      orderItemsMap.forEach((items, orderNum) => {
         const orderCommission = orderCommissions.get(orderNum) || 0;
+        const orderTotalRevenue = orderTotalsMap.get(orderNum) || 0;
         
-        // Prorate commission across products by revenue
-        orderItems.forEach(item => {
+        items.forEach(item => {
           const productNum = item.productNum;
           
           if (!productMap.has(productNum)) {
@@ -310,7 +328,7 @@ export function TopProductsWidget({
             entry.totalCommission += productCommission;
           }
         });
-      }
+      });
 
       // Sort by selected metric
       const sortFn = {

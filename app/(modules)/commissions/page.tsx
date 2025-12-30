@@ -299,10 +299,10 @@ export default function CommissionsPage() {
         >
           <div className="flex items-center mb-3">
             <FileText className="w-6 h-6 text-[#93D500] mr-3" />
-            <h3 className="font-semibold text-gray-900">Quarterly Reports</h3>
+            <h3 className="font-semibold text-gray-900">Review Commissions</h3>
           </div>
           <p className="text-sm text-gray-600">
-            Generate quarterly bonus summaries and export data
+            View detailed commission reports and quarterly bonuses
           </p>
         </button>
 
