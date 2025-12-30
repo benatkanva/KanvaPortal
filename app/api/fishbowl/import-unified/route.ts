@@ -502,7 +502,13 @@ async function importUnifiedReport(buffer: Buffer, filename: string): Promise<Im
 
     const sanitizedCustomerId2 = String(customerId).replace(/[\/\\]/g, '_').trim();
 
-    const rawDate2 = row['Issued date'] ?? row['Issued Date'] ?? row['Date fulfillment'] ?? row['Date fulfilled'] ?? row['Fulfilment Date'];
+    // Use ONLY 'Issued date' field for line items (same as orders)
+    const rawDate2 = row['Issued date'];
+    
+    if (!rawDate2) {
+      console.warn(`⚠️  Line item ${lineItemId} missing 'Issued date' - skipping`);
+      continue;
+    }
 
     const { date: postDate2, monthKey: monthKey2, y: y2 } = parseExcelOrTextDate(rawDate2);
     const postingDate2 = postDate2 ? Timestamp.fromDate(postDate2) : null;
