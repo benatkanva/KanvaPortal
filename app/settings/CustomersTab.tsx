@@ -152,11 +152,16 @@ export default function CustomersTab({ isAdmin, reps, adminListOnly = false }: C
         const data = doc.data();
         const customerId = data.id || data.customerNum || doc.id;
 
-        // Get the assigned rep (PRIORITY: manual fishbowlUsername first, then orders)
-        const assignedRep = data.fishbowlUsername || data.salesPerson || customerSalesRepMap.get(customerId) || data.salesRep || '';
-        const repName = repsMap.get(assignedRep) || assignedRep || 'Unassigned';
+        // FIXED: Get CURRENT account owner (not originator)
+        // Priority: manual override > currentOwner > salesRep (account owner) > fallback
+        // NOTE: salesPerson is the ORIGINATOR (for commissions), not current owner
+        const currentOwner = data.fishbowlUsername ||        // Manual admin assignment
+                            data.currentOwner ||             // New field for current owner
+                            data.salesRep ||                 // Fishbowl "Sales Rep" (account owner)
+                            '';
+        const currentOwnerName = repsMap.get(currentOwner) || currentOwner || 'Unassigned';
 
-        // Get the original owner from Fishbowl orders
+        // Get the original owner from Fishbowl orders (for reference only)
         const originalOwner = customerSalesRepMap.get(customerId) || data.salesRep || 'Unassigned';
 
         customersData.push({
@@ -164,9 +169,10 @@ export default function CustomersTab({ isAdmin, reps, adminListOnly = false }: C
           customerNum: data.id || data.accountNumber?.toString() || doc.id,
           customerName: data.name || data.customerContact || 'Unknown',
           accountType: data.accountType || 'Retail',
-          salesPerson: repName,
-          fishbowlUsername: assignedRep, // This is what the dropdown binds to
-          originalOwner: originalOwner, // Original from Fishbowl
+          salesPerson: currentOwnerName,                    // Display name of CURRENT owner
+          fishbowlUsername: currentOwner,                   // Fishbowl username for filtering
+          currentOwner: currentOwner,                       // New: current account owner
+          originalOwner: originalOwner,                     // Original from Fishbowl orders
           shippingCity: data.shippingCity || '',
           shippingState: data.shippingState || '',
           lat: data.lat,
