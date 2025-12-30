@@ -1008,15 +1008,21 @@ async function getCustomerStatus(
       .limit(10) // Get recent orders to check for rep changes
       .get();
 
+    console.log(`🔍 Customer ${customerId} (${customer?.customerName || 'Unknown'}): Found ${previousOrders.size} previous orders`);
+
     if (previousOrders.empty) {
       // No prior orders found under this customerId.
       // If we didn't already classify as transferred via originalOwner above,
       // treat this as true NEW business.
+      console.log(`   ✅ NEW - No previous orders found`);
       return 'new';
     }
 
     const lastOrder = previousOrders.docs[0].data();
     const lastOrderDate = lastOrder.postingDate.toDate();
+    
+    console.log(`   📦 Last order: ${lastOrder.orderNum} | Date: ${lastOrderDate.toISOString().split('T')[0]} | Rep: ${lastOrder.salesPerson}`);
+    console.log(`   🎯 Current order rep: ${currentSalesPerson}`);
     
     // Get the ACTUAL FIRST order (oldest ever) to determine customer age
     const firstOrderQuery = await adminDb.collection('fishbowl_sales_orders')
@@ -1074,8 +1080,11 @@ async function getCustomerStatus(
 
     // Check for rep transfer (non-reorg scenario)
     if (lastOrder.salesPerson !== currentSalesPerson) {
+      console.log(`   🔄 TRANSFERRED - Rep changed from ${lastOrder.salesPerson} to ${currentSalesPerson}`);
       return 'transferred';
     }
+    
+    console.log(`   ✅ Same rep throughout - checking customer age...`);
 
     // Same rep, check customer age (time since FIRST order)
     console.log(`📅 Customer ${customerId}: First order ${firstOrderDate.toISOString().split('T')[0]}, Age: ${customerAgeMonths} months`);
