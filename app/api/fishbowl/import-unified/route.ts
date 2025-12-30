@@ -709,6 +709,22 @@ export async function POST(request: NextRequest) {
     
     console.log(`\n⏱️  Import completed in ${duration.toFixed(1)}s (${Math.floor(stats.processed / duration)} rows/sec)\n`);
     
+    // Trigger customer sales summary update in background
+    console.log('🔄 Triggering customer sales summary update...');
+    fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/migrate-customer-summary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).then(async (res) => {
+      const result = await res.json();
+      if (result.success) {
+        console.log(`✅ Customer summary updated: ${result.summariesCreated} summaries`);
+      } else {
+        console.error('⚠️ Customer summary update failed:', result.error);
+      }
+    }).catch(err => {
+      console.error('⚠️ Failed to trigger customer summary update:', err);
+    });
+    
     return NextResponse.json({
       success: true,
       complete: true,

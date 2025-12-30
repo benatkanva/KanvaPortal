@@ -272,4 +272,20 @@ async function processDataInBackground(
   await pendingDocRef.delete();
   
   console.log('✅ Background import complete:', stats);
+  
+  // Trigger customer sales summary update in background
+  console.log('🔄 Triggering customer sales summary update...');
+  fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/migrate-customer-summary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  }).then(async (res) => {
+    const result = await res.json();
+    if (result.success) {
+      console.log(`✅ Customer summary updated: ${result.summariesCreated} summaries`);
+    } else {
+      console.error('⚠️ Customer summary update failed:', result.error);
+    }
+  }).catch(err => {
+    console.error('⚠️ Failed to trigger customer summary update:', err);
+  });
 }
