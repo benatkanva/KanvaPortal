@@ -133,11 +133,6 @@ export default function OrgChartTab({ isAdmin }: OrgChartTabProps) {
         <RegionManager />
       )}
 
-      {/* Regional Stats Sub-Tab */}
-      {orgChartSubTab === 'regions' && (
-        <RegionMap />
-      )}
-
       {/* Users Table - Only show on Team tab */}
       {orgChartSubTab === 'team' && (
         <>
