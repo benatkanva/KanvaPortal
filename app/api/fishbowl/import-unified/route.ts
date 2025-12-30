@@ -325,7 +325,7 @@ async function importUnifiedReport(buffer: Buffer, filename: string): Promise<Im
         // CREATE NEW CUSTOMER from Fishbowl data
         const customerName = row['Customer Name'] || row['Customer'] || 'Unknown';
         // FIXED: Use "Sales Rep" (current account owner), NOT "Sales person" (originator)
-        const currentAccountOwner = row['Sales Rep'] || row['Default Sales Rep'] || '';
+        const currentAccountOwner = row['Sales Rep'] || '';
         const accountNumber = row['Account Order ID'] || row['Account order ID'] || '';
         const accountId = row['Account ID'] || '';
         
@@ -542,7 +542,7 @@ async function importUnifiedReport(buffer: Buffer, filename: string): Promise<Im
 
     // Get accountType from cache (consistent with customer)
     const cachedType2 = customerTypeCache.get(String(customerId));
-    const itemAccountType = cachedType2?.type ?? (copperByAccountNumber.get(String(customerId))?.accountType?.trim() || (row['Account Type'] ?? row['Account type'] ?? ''));
+    const itemAccountType = cachedType2?.type ?? (copperByAccountNumber.get(String(customerId))?.accountType?.trim() || row['Account type'] || '');
     const itemAccountTypeSource = cachedType2?.source ?? (copperByAccountNumber.get(String(customerId))?.accountType ? 'copper' : 'fishbowl');
 
     // Mark shipping/CC items
