@@ -305,7 +305,7 @@ async function importUnifiedReport(buffer: Buffer, filename: string): Promise<Im
     
     const customerId = row['Account ID'] || row['Account id'] || row['Customer id'];
     const salesOrderNum = String(row['Sales order Number'] ?? row['Sales Order Number'] ?? '').trim();
-    const salesOrderId = row['Sales Order ID'] || row['SO ID'];
+    const salesOrderId = row['Sales Order ID'] || row['BOL'] || row['SO ID'];
     const lineItemId = row['SO Item ID'] || row['SO item ID'] || row['SO Item Id'] || row['SO item id'];
     
     // Skip if missing critical data
