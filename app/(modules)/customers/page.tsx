@@ -25,7 +25,7 @@ export default function ActiveCustomersPage() {
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [selectedState, setSelectedState] = useState('all');
-  const [sortField, setSortField] = useState<'customerNum' | 'customerName' | 'accountType' | 'salesPerson' | 'shippingCity' | 'shippingState' | 'region' | 'orderCount' | 'lifetimeValue'>('customerName');
+  const [sortField, setSortField] = useState<'customerNum' | 'customerName' | 'accountType' | 'salesPerson' | 'shippingCity' | 'shippingState' | 'region' | 'orderCount' | 'lifetimeValue' | 'lastOrderDate'>('customerName');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +50,8 @@ export default function ActiveCustomersPage() {
           totalSales: data.totalSales || 0,
           region: data.region || '',
           regionColor: data.regionColor || '#808080',
-          salesPerson: data.salesPerson || '' // Already has sales rep info
+          salesPerson: data.salesPerson || '', // Already has sales rep info
+          lastOrderDate: data.lastOrderDate || '' // Last order date
         });
       });
       console.log(`Loaded ${summaryMap.size} customer sales summaries`);
@@ -70,7 +71,8 @@ export default function ActiveCustomersPage() {
           orderCount: 0,
           totalSales: 0,
           region: '',
-          regionColor: '#808080'
+          regionColor: '#808080',
+          lastOrderDate: ''
         };
 
         // Get current owner from customer data or summary
@@ -92,6 +94,7 @@ export default function ActiveCustomersPage() {
           // Sales metrics from customer_sales_summary
           orderCount: summary.orderCount,
           lifetimeValue: summary.totalSales,
+          lastOrderDate: summary.lastOrderDate,
           region: summary.region,
           regionColor: summary.regionColor
         });
@@ -111,7 +114,7 @@ export default function ActiveCustomersPage() {
     }
   };
 
-  const handleSort = (field: 'customerNum' | 'customerName' | 'accountType' | 'salesPerson' | 'shippingCity' | 'shippingState' | 'region' | 'orderCount' | 'lifetimeValue') => {
+  const handleSort = (field: 'customerNum' | 'customerName' | 'accountType' | 'salesPerson' | 'shippingCity' | 'shippingState' | 'region' | 'orderCount' | 'lifetimeValue' | 'lastOrderDate') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -147,11 +150,22 @@ export default function ActiveCustomersPage() {
       filtered = filtered.filter(c => c.region === selectedRegion);
     }
 
-    // Sort
+    // Sort with proper numeric handling
     filtered.sort((a, b) => {
-      const aVal = a[sortField] || '';
-      const bVal = b[sortField] || '';
-      const comparison = aVal.toString().localeCompare(bVal.toString());
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+      
+      // Handle numeric fields
+      if (sortField === 'orderCount' || sortField === 'lifetimeValue') {
+        const aNum = Number(aVal) || 0;
+        const bNum = Number(bVal) || 0;
+        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+      
+      // Handle string fields
+      const aStr = (aVal || '').toString();
+      const bStr = (bVal || '').toString();
+      const comparison = aStr.localeCompare(bStr);
       return sortDirection === 'asc' ? comparison : -comparison;
     });
 
@@ -300,6 +314,7 @@ export default function ActiveCustomersPage() {
                   'State',
                   'Region',
                   'Orders',
+                  'Last Order Date',
                   'Lifetime Value'
                 ],
                 ...filteredCustomers.map(c => [
@@ -312,6 +327,7 @@ export default function ActiveCustomersPage() {
                   c.shippingState || '',
                   c.region || '',
                   c.orderCount || 0,
+                  c.lastOrderDate || '',
                   c.lifetimeValue || 0
                 ])
               ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -525,6 +541,19 @@ export default function ActiveCustomersPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <div
                     className="flex items-center space-x-1 cursor-pointer hover:text-primary-600"
+                    onClick={() => handleSort('lastOrderDate')}
+                  >
+                    <span>Last Order</span>
+                    {sortField === 'lastOrderDate' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div
+                    className="flex items-center space-x-1 cursor-pointer hover:text-primary-600"
                     onClick={() => handleSort('lifetimeValue')}
                   >
                     <span>Lifetime Value</span>
@@ -540,7 +569,7 @@ export default function ActiveCustomersPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                     No customers found
                   </td>
                 </tr>
@@ -591,6 +620,9 @@ export default function ActiveCustomersPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 text-right font-medium">
                       {customer.orderCount || 0}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {customer.lastOrderDate || 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">
                       ${(customer.lifetimeValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
