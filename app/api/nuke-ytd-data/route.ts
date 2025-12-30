@@ -4,16 +4,20 @@ import { adminDb } from '@/lib/firebase/admin';
 export const dynamic = 'force-dynamic';
 
 /**
- * NUCLEAR OPTION: Delete all 2025 commission and order data for clean reimport
+ * NUCLEAR OPTION: Delete commission and order data for clean reimport
  * 
  * Query params:
  * - collections: comma-separated list of collections to nuke
- *   Options: monthly_commissions, monthly_commission_summary, fishbowl_sales_orders
+ *   Options: monthly_commissions, monthly_commission_summary, fishbowl_sales_orders, fishbowl_soitems
  *   Example: ?collections=monthly_commissions,monthly_commission_summary
  * 
- * - year: year to delete (default: 2025)
+ * - year: year to delete (default: 2025, can also use 2024)
  * 
  * SAFETY: Requires confirmation=true query param to actually delete
+ * 
+ * Examples:
+ * - Delete 2025 commissions only: ?collections=monthly_commissions,monthly_commission_summary&year=2025&confirmation=true
+ * - Delete 2024 everything: ?collections=monthly_commissions,monthly_commission_summary,fishbowl_sales_orders,fishbowl_soitems&year=2024&confirmation=true
  */
 export async function POST(request: NextRequest) {
   try {
@@ -57,6 +61,9 @@ export async function POST(request: NextRequest) {
       } else if (collectionName === 'fishbowl_sales_orders') {
         // Delete all fishbowl_sales_orders for the year
         deletedCount = await deleteSalesOrdersByYear(year, confirmation);
+      } else if (collectionName === 'fishbowl_soitems') {
+        // Delete all fishbowl_soitems for the year
+        deletedCount = await deleteLineItemsByYear(year, confirmation);
       } else {
         console.log(`⚠️  Unknown collection: ${collectionName}`);
         continue;
