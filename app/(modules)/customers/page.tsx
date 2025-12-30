@@ -40,7 +40,7 @@ export default function ActiveCustomersPage() {
     setLoading(true);
     
     try {
-      // Load customer sales summary for metrics
+      // Load customer sales summary for metrics (includes salesPerson)
       const summarySnapshot = await getDocs(collection(db, 'customer_sales_summary'));
       const summaryMap = new Map();
       summarySnapshot.forEach((doc) => {
@@ -49,7 +49,8 @@ export default function ActiveCustomersPage() {
           orderCount: data.orderCount || 0,
           totalSales: data.totalSales || 0,
           region: data.region || '',
-          regionColor: data.regionColor || '#808080'
+          regionColor: data.regionColor || '#808080',
+          salesPerson: data.salesPerson || '' // Already has sales rep info
         });
       });
       console.log(`Loaded ${summaryMap.size} customer sales summaries`);
@@ -57,17 +58,6 @@ export default function ActiveCustomersPage() {
       // Get customers from Firestore
       const snapshot = await getDocs(collection(db, 'fishbowl_customers'));
       console.log(`Found ${snapshot.size} customers in Firestore`);
-
-      // Get sales rep for each customer from their orders
-      const ordersSnapshot = await getDocs(collection(db, 'fishbowl_sales_orders'));
-      const customerSalesRepMap = new Map();
-      ordersSnapshot.forEach(doc => {
-        const order = doc.data();
-        if (order.customerId && order.salesPerson) {
-          customerSalesRepMap.set(order.customerId, order.salesPerson);
-        }
-      });
-      console.log(`Mapped ${customerSalesRepMap.size} customers to sales reps from orders`);
 
       const customersData: any[] = [];
 
@@ -83,11 +73,11 @@ export default function ActiveCustomersPage() {
           regionColor: '#808080'
         };
 
-        // Get current owner
-        const currentOwner = data.fishbowlUsername || data.currentOwner || data.salesRep || '';
+        // Get current owner from customer data or summary
+        const currentOwner = data.fishbowlUsername || data.currentOwner || data.salesRep || summary.salesPerson || '';
         
-        // Get the original owner from Fishbowl orders
-        const originalOwner = customerSalesRepMap.get(customerId) || data.salesRep || 'Unassigned';
+        // Get the original owner from summary (already aggregated from orders)
+        const originalOwner = summary.salesPerson || data.salesRep || 'Unassigned';
 
         customersData.push({
           id: doc.id,
