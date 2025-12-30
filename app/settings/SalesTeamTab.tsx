@@ -49,7 +49,9 @@ export default function SalesTeamTab({ isAdmin }: SalesTeamTabProps) {
       salesPerson: '',
       startDate: new Date().toISOString().split('T')[0],
       active: true,
+      isActive: true,
       isCommissioned: true,
+      role: 'sales',
       notes: '',
     };
     setReps([...reps, newRep]);

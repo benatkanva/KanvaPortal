@@ -1325,54 +1325,7 @@ function SettingsPageContent() {
     }
   };
 
-  const handleSaveReps = async () => {
-    setSaving(true);
-    try {
-      for (const rep of reps) {
-        const { id, ...data } = rep;
-        
-        // Get the Fishbowl username - it's stored as 'salesPerson' in the reps array
-        const fishbowlUsername = data.salesPerson || data.fishbowlUsername || '';
-        
-        console.log(`Saving rep ${data.name}: salesPerson = ${fishbowlUsername}`);
-        
-        // Map to users collection schema
-        const userData: any = {
-          name: data.name,
-          email: data.email,
-          title: data.title,
-          salesPerson: fishbowlUsername, // This is the Fishbowl username field
-          isActive: data.active,
-          role: 'sales',
-          isCommissioned: true,
-          updatedAt: new Date()
-        };
-        
-        if (data.notes) {
-          userData.notes = data.notes;
-        }
-        
-        if (id.startsWith('new_')) {
-          // Creating new user - need more fields
-          userData.createdAt = new Date();
-          userData.passwordChanged = false;
-          userData.photoUrl = null;
-          await addDoc(collection(db, 'users'), userData);
-        } else {
-          // Updating existing user
-          await updateDoc(doc(db, 'users', id), userData);
-          console.log(`✅ Updated user ${id} with salesPerson: ${fishbowlUsername}`);
-        }
-      }
-      toast.success('Sales reps saved successfully');
-      await loadSettings();
-    } catch (error) {
-      console.error('Error saving reps:', error);
-      toast.error('Failed to save sales reps');
-    } finally {
-      setSaving(false);
-    }
-  };
+  // NOTE: handleSaveReps removed - SalesTeamTab component has its own save handler
 
   // Helper to get rate value
   const getRateValue = (segmentId: string, status: string): number | string => {
