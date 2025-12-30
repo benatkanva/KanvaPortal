@@ -541,7 +541,7 @@ export default function DataSyncTab({ isAdmin, onCustomersUpdated }: DataSyncTab
     const loadingToast = toast.loading(dryRun ? '🔍 Analyzing RepRally billing data...' : '🔴 Creating order records...');
     
     try {
-      const response = await fetch('/api/reprally/build-orders', {
+      const response = await fetch('/api/reprally/build-collection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dryRun })
@@ -578,6 +578,8 @@ export default function DataSyncTab({ isAdmin, onCustomersUpdated }: DataSyncTab
     try {
       const response = await fetch('/api/copper/mark-active', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun: false })
       });
       
       const data = await response.json();
