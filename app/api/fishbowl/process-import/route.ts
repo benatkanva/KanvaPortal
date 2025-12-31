@@ -231,16 +231,26 @@ async function processDataInBackground(
     const itemId = String(lineItemId);
     const itemRef = adminDb.collection('fishbowl_soitems').doc(itemId);
     
+    // Parse 'Issued date' for line items
+    const itemIssuedDate = parseDate(row['Issued date']);
+    const itemCommissionMonth = itemIssuedDate 
+      ? `${itemIssuedDate.getFullYear()}-${String(itemIssuedDate.getMonth() + 1).padStart(2, '0')}`
+      : undefined;
+    const itemCommissionYear = itemIssuedDate ? itemIssuedDate.getFullYear() : undefined;
+    
     batch.set(itemRef, {
       soNumber: soNum,
       soItemId: lineItemId,
       customerId: customerId,
       customerName: customerName,
       product: String(row['SO Item Product Number'] || row['Part Description'] || row['Product'] || '').trim(),
-      quantity: safeParseNumber(row['Qty Fulfilled'] || row['Qty'] || row['Quantity']),
-      unitPrice: safeParseNumber(row['Product Price'] || row['Unit Price'] || row['Price']),
+      quantity: safeParseNumber(row['Qty fulfilled'] || row['Qty'] || row['Quantity']),
+      unitPrice: safeParseNumber(row['Unit price'] || row['Price']),
       totalPrice: safeParseNumber(row['Total Price'] || row['Total']),
-      dateScheduled: parseDate(row['Date Scheduled']),
+      postingDate: itemIssuedDate ? Timestamp.fromDate(itemIssuedDate) : null,
+      commissionMonth: itemCommissionMonth,
+      commissionYear: itemCommissionYear,
+      salesPerson: String(row['Sales person'] || '').trim(),
       updatedAt: Timestamp.now()
     }, { merge: true });
     batchCount++;
