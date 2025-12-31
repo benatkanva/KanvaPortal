@@ -32,13 +32,49 @@ function safeParseNumber(val: any): number {
 function parseDate(val: any): Date | null {
   if (!val) return null;
   if (val instanceof Date) return val;
+  
+  // Handle Excel serial date numbers
   if (typeof val === 'number') {
-    // Excel serial date
     const date = XLSX.SSF.parse_date_code(val);
     if (date) return new Date(date.y, date.m - 1, date.d);
   }
-  const parsed = new Date(val);
-  return isNaN(parsed.getTime()) ? null : parsed;
+  
+  // Convert to string for parsing
+  const dateStr = String(val).trim();
+  
+  // Handle Conversite format: MM-DD-YYYY HH:MM:SS or MM/DD/YYYY HH:MM
+  // Examples: "12-29-2025 20:37:35" or "12/29/2025 20:37"
+  const conversiteMatch = dateStr.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+  if (conversiteMatch) {
+    const [, month, day, year, hour, minute, second] = conversiteMatch;
+    const date = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // Month is 0-indexed
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      second ? parseInt(second) : 0
+    );
+    
+    // Validate the date is reasonable (not in the future, not before 2000)
+    const now = new Date();
+    if (date.getFullYear() >= 2000 && date <= now) {
+      return date;
+    }
+  }
+  
+  // Fallback to standard Date parsing
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    // Validate the date is reasonable
+    const now = new Date();
+    if (parsed.getFullYear() >= 2000 && parsed <= now) {
+      return parsed;
+    }
+  }
+  
+  console.warn(`⚠️ Failed to parse date: "${val}"`);
+  return null;
 }
 
 export async function POST(req: NextRequest) {
