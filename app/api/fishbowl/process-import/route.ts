@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import * as XLSX from 'xlsx';
+import { createHeaderMap, normalizeRow, validateRequiredHeaders } from '../normalize-headers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -101,12 +102,34 @@ export async function POST(req: NextRequest) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[];
+    const rawData = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[];
     
-    console.log(`✅ Found ${data.length} rows to process`);
+    console.log(`✅ Found ${rawData.length} rows to process`);
     
     // Update status to processing with total rows
     const progressRef = adminDb.collection('import_progress').doc(importId);
+    
+    // Create header mapping from CSV headers
+    const csvHeaders = rawData.length > 0 ? Object.keys(rawData[0]) : [];
+    const headerMap = createHeaderMap(csvHeaders);
+    
+    // Validate required headers are present
+    const validation = validateRequiredHeaders(headerMap);
+    if (!validation.valid) {
+      console.error('❌ Missing required headers:', validation.missing);
+      await progressRef.update({
+        status: 'error',
+        error: `Missing required headers: ${validation.missing.join(', ')}`,
+        updatedAt: Timestamp.now()
+      });
+      return NextResponse.json({
+        error: `Missing required headers: ${validation.missing.join(', ')}`,
+        missing: validation.missing
+      }, { status: 400 });
+    }
+    
+    // Normalize all rows using the header map
+    const data = rawData.map(row => normalizeRow(row, headerMap));
     await progressRef.update({
       status: 'processing',
       totalRows: data.length,
