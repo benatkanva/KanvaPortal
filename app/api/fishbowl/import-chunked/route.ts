@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { Timestamp } from 'firebase-admin/firestore';
-import * as XLSX from 'xlsx';
+import { parse } from 'csv-parse/sync';
 import Decimal from 'decimal.js';
 
 export const dynamic = 'force-dynamic';
@@ -244,12 +244,17 @@ async function importUnifiedReport(buffer: Buffer, filename: string, importId: s
   console.log('📥 Importing Unified Fishbowl Report from Conversight...');
   console.log(`📋 Import ID: ${importId}`);
   
-  // Parse file
-  console.log('📄 Parsing file...');
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[];
+  // Parse file as CSV text (not XLSX binary) to preserve exact values
+  // CRITICAL: XLSX library auto-converts currency strings to numbers incorrectly
+  // csv-parse reads raw text values, preserving "$6,120.00" format for correct parsing
+  console.log('📄 Parsing CSV file as text...');
+  const csvText = buffer.toString('utf-8');
+  const data = parse(csvText, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+    relax_column_count: true
+  }) as Record<string, any>[];
   
   console.log(`✅ Found ${data.length} rows to process`);
   
