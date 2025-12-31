@@ -203,12 +203,23 @@ async function processDataInBackground(
     // Upsert order (once per SO)
     if (!processedOrders.has(soNum)) {
       const orderRef = adminDb.collection('fishbowl_sales_orders').doc(soNum);
+      
+      // Parse 'Issued date' (MM-DD-YYYY format)
+      const issuedDate = parseDate(row['Issued date']);
+      const commissionMonth = issuedDate 
+        ? `${issuedDate.getFullYear()}-${String(issuedDate.getMonth() + 1).padStart(2, '0')}`
+        : undefined;
+      const commissionYear = issuedDate ? issuedDate.getFullYear() : undefined;
+      
       batch.set(orderRef, {
         soNumber: soNum,
         customerId: customerId,
         customerName: customerName,
-        dateScheduled: parseDate(row['Date Scheduled']),
-        salesperson: String(row['Salesperson'] || '').trim(),
+        postingDate: issuedDate ? Timestamp.fromDate(issuedDate) : null,
+        commissionMonth: commissionMonth,
+        commissionYear: commissionYear,
+        salesPerson: String(row['Sales person'] || '').trim(),
+        salesRep: String(row['Sales Rep'] || '').trim(),
         updatedAt: Timestamp.now()
       }, { merge: true });
       batchCount++;
