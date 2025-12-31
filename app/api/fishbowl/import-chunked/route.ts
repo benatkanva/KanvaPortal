@@ -49,6 +49,21 @@ function parseExcelOrTextDate(raw: any): { date?: Date; monthKey?: string; y?: n
     }
     const s = String(raw).trim();
 
+    // Handle abbreviated month format: Jan-24, Dec-25, etc.
+    if (/^(\w{3})-(\d{2})$/.test(s)) {
+      const [monthAbbrev, yearShort] = s.split('-');
+      const Y = parseInt(yearShort) >= 0 && parseInt(yearShort) <= 50 ? 2000 + parseInt(yearShort) : 1900 + parseInt(yearShort);
+      const monthMap: Record<string, number> = {
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+      };
+      const M = monthMap[monthAbbrev];
+      if (M) {
+        const d = new Date(Y, M - 1, 1);
+        return { date: d, monthKey: `${Y}-${String(M).padStart(2,'0')}`, y: Y };
+      }
+    }
+
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { // ISO YYYY-MM-DD
       const [Y, M, D] = s.split('-').map(Number);
       const d = new Date(Y, M - 1, D);

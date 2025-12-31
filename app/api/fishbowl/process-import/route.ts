@@ -384,20 +384,39 @@ async function processDataInBackground(
       // Use Year-month fallback for line items too
       const yearMonth = String(row['Year-month'] || '').trim();
       if (yearMonth) {
-        const match = yearMonth.match(/(\w+)\s+(\d{4})/);
-        if (match) {
-          const monthName = match[1];
-          const year = parseInt(match[2]);
+        // Try abbreviated format first: Jan-24, Dec-25, etc.
+        const abbrevMatch = yearMonth.match(/^(\w{3})-(\d{2})$/);
+        if (abbrevMatch) {
+          const monthAbbrev = abbrevMatch[1];
+          const yearShort = parseInt(abbrevMatch[2]);
+          const year = yearShort >= 0 && yearShort <= 50 ? 2000 + yearShort : 1900 + yearShort;
           const monthMap: Record<string, number> = {
-            'January': 1, 'February': 2, 'March': 3, 'April': 4,
-            'May': 5, 'June': 6, 'July': 7, 'August': 8,
-            'September': 9, 'October': 10, 'November': 11, 'December': 12
+            'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+            'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
           };
-          const month = monthMap[monthName];
+          const month = monthMap[monthAbbrev];
           if (month && year) {
             itemCommissionMonth = `${year}-${String(month).padStart(2, '0')}`;
             itemCommissionYear = year;
             itemIssuedDate = new Date(year, month - 1, 1);
+          }
+        } else {
+          // Fallback to full month name format: December 2025, April 2023, etc.
+          const fullMatch = yearMonth.match(/(\w+)\s+(\d{4})/);
+          if (fullMatch) {
+            const monthName = fullMatch[1];
+            const year = parseInt(fullMatch[2]);
+            const monthMap: Record<string, number> = {
+              'January': 1, 'February': 2, 'March': 3, 'April': 4,
+              'May': 5, 'June': 6, 'July': 7, 'August': 8,
+              'September': 9, 'October': 10, 'November': 11, 'December': 12
+            };
+            const month = monthMap[monthName];
+            if (month && year) {
+              itemCommissionMonth = `${year}-${String(month).padStart(2, '0')}`;
+              itemCommissionYear = year;
+              itemIssuedDate = new Date(year, month - 1, 1);
+            }
           }
         }
       }
