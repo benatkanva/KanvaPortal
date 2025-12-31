@@ -477,10 +477,9 @@ async function importUnifiedReport(buffer: Buffer, filename: string): Promise<Im
         orderWasWritten = true;
       }
       
-      // ALWAYS write to customer's order history subcollection
-      // (even if flat collection is unchanged - allows subcollection structure updates)
+      // Write to customer's order history subcollection (only if order was written)
       // Use sales order number (5799, 9082, etc.) as document ID for readability
-      if (sanitizedCustomerId && soNumStr) {
+      if (orderWasWritten && sanitizedCustomerId && soNumStr) {
         const orderHistoryRef = adminDb
           .collection('fishbowl_customers')
           .doc(sanitizedCustomerId)
