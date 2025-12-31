@@ -107,24 +107,15 @@ export async function POST(req: NextRequest) {
       if (order.customerId !== undefined) fieldVariations.customerId.add('customerId');
       if (order.customerNum !== undefined) fieldVariations.customerId.add('customerNum');
       
-      // Check for admin orders
+      // Skip admin orders entirely - they are for information only
       if (order.salesPerson === 'admin' || order.salesPerson === 'Admin') {
         adminOrders.push(order.soNumber || order.num || orderDoc.id);
-        
-        // Check if customer has assigned rep
-        const customer = customersMap.get(order.customerId);
-        if (!customer?.salesPerson) {
-          continue; // Skip - no rep assignment
-        }
+        continue; // Skip admin orders completely
       }
       
       // Determine effective sales person
       // CRITICAL: ONLY use order.salesPerson (Column T from Conversite CSV)
       let effectiveSalesPerson = order.salesPerson;
-      if (order.salesPerson === 'admin' || order.salesPerson === 'Admin') {
-        const customer = customersMap.get(order.customerId);
-        effectiveSalesPerson = customer?.salesPerson || 'admin';
-      }
       
       // Check if rep exists and is active
       const rep = repsMap.get(effectiveSalesPerson) || repsByName.get(effectiveSalesPerson);

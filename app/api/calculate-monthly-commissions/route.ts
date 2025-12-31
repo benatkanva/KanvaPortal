@@ -432,19 +432,13 @@ async function calculateCommissionsWithProgress(
                       customersMap.get(order.accountNumber) ||
                       customersMap.get(order.customerName);
       
-      // For admin orders, use the customer's assigned salesPerson instead
+      // Skip admin orders entirely - they are for information only (not commissioned)
       // CRITICAL: ONLY use order.salesPerson (Column T from Conversite CSV)
       // order.salesRep is stored for reporting only and is NOT used in commission calculation
       let effectiveSalesPerson = order.salesPerson;
       if (order.salesPerson === 'admin' || order.salesPerson === 'Admin') {
-        if (customer?.salesPerson) {
-          effectiveSalesPerson = customer.salesPerson;
-          console.log(`📋 Admin order ${order.soNumber || order.num} → Using customer's rep: ${effectiveSalesPerson}`);
-        } else {
-          // No customer or no assigned rep - skip this order
-          skippedCounts.admin++;
-          continue;
-        }
+        skippedCounts.admin++;
+        continue; // Skip admin orders completely
       }
 
       // Skip Commerce/Shopify orders (no commission on direct e-commerce)
