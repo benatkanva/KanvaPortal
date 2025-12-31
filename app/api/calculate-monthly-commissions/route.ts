@@ -525,16 +525,16 @@ async function calculateCommissionsWithProgress(
       let negativeAdjustments = 0; // Track negative items separately (rep-paid shipping, credits, refunds)
       
       // Always calculate from line items (needed because order.revenue may not exist in new imports)
-      const lineItemsSnapshot = await adminDb.collection('fishbowl_soitems')
+      const revenueLineItemsSnapshot = await adminDb.collection('fishbowl_soitems')
         .where('salesOrderId', '==', order.salesOrderId)
         .get();
       
-      if (!lineItemsSnapshot.empty) {
+      if (!revenueLineItemsSnapshot.empty) {
         // Calculate revenue from line items
         if (commissionRules?.excludeShipping || commissionRules?.excludeCCProcessing || orderAmount === 0) {
           let commissionableAmount = 0;
           
-          for (const lineItemDoc of lineItemsSnapshot.docs) {
+          for (const lineItemDoc of revenueLineItemsSnapshot.docs) {
             const lineItem = lineItemDoc.data();
             const productName = (lineItem.productName || '').toLowerCase();
             const productNum = (lineItem.productNum || '').toLowerCase();
