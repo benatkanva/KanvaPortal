@@ -227,18 +227,13 @@ async function processDataInBackground(
     if (!processedOrders.has(soNum)) {
       const orderRef = adminDb.collection('fishbowl_sales_orders').doc(soNum);
       
-      // Parse 'Issued date' (MM-DD-YYYY format)
+      // Parse 'Issued date' (MM-DD-YYYY HH:MM:SS format from Conversite)
       const issuedDate = parseDate(row['Issued date']);
       const commissionMonth = issuedDate 
         ? `${issuedDate.getFullYear()}-${String(issuedDate.getMonth() + 1).padStart(2, '0')}`
         : undefined;
       const commissionYear = issuedDate ? issuedDate.getFullYear() : undefined;
       const postingDate = issuedDate ? Timestamp.fromDate(issuedDate) : null;
-      
-      // Parse revenue from Shipped or Ordered columns
-      const shippedAmount = safeParseNumber(row['Shipped'] || 0);
-      const orderedAmount = safeParseNumber(row['Ordered'] || 0);
-      const orderRevenue = shippedAmount || orderedAmount || 0;
       
       const orderData = {
         soNumber: soNum,
@@ -250,8 +245,6 @@ async function processDataInBackground(
         commissionYear: commissionYear,
         salesPerson: String(row['Sales person'] || '').trim(),
         salesRep: String(row['Sales Rep'] || '').trim(),
-        revenue: orderRevenue,
-        orderValue: orderRevenue,
         updatedAt: Timestamp.now()
       };
       

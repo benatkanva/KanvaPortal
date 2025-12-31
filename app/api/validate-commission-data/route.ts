@@ -143,20 +143,16 @@ export async function POST(req: NextRequest) {
         missingCustomers.push(order.soNumber || order.num || orderDoc.id);
       }
       
-      // Calculate revenue - prefer order-level revenue, fallback to line items
-      let orderRevenue = order.revenue || order.orderValue || 0;
+      // Calculate revenue from line items (Conversite data is line-item based)
+      const lineItemsSnapshot = await adminDb.collection('fishbowl_soitems')
+        .where('salesOrderId', '==', order.salesOrderId)
+        .get();
       
-      // If no order-level revenue, calculate from line items
-      if (orderRevenue === 0) {
-        const lineItemsSnapshot = await adminDb.collection('fishbowl_soitems')
-          .where('salesOrderId', '==', order.salesOrderId)
-          .get();
-        
-        lineItemsSnapshot.forEach(itemDoc => {
-          const item = itemDoc.data();
-          orderRevenue += item.totalPrice || 0;
-        });
-      }
+      let orderRevenue = 0;
+      lineItemsSnapshot.forEach(itemDoc => {
+        const item = itemDoc.data();
+        orderRevenue += item.totalPrice || 0;
+      });
       
       totalRevenue += orderRevenue;
       matchedOrders++;

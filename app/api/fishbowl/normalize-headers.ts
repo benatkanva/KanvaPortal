@@ -172,31 +172,6 @@ export const HEADER_MAPPINGS: HeaderMapping[] = [
       'extendedprice'
     ],
     description: 'Total line item price'
-  },
-  {
-    standardName: 'Shipped',
-    aliases: [
-      'shipped',
-      'shipped amount',
-      'shippedamount',
-      'order total',
-      'ordertotal',
-      'order amount',
-      'orderamount',
-      'revenue',
-      'order value',
-      'ordervalue'
-    ],
-    description: 'Total shipped/fulfilled amount for the order'
-  },
-  {
-    standardName: 'Ordered',
-    aliases: [
-      'ordered',
-      'ordered amount',
-      'orderedamount'
-    ],
-    description: 'Total ordered amount'
   }
 ];
 
