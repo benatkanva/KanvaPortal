@@ -304,6 +304,10 @@ async function processDataInBackground(
       
       const postingDate = issuedDate ? Timestamp.fromDate(issuedDate) : null;
       
+      // CRITICAL: commission-calculator.ts queries by commissionDate field
+      // We need BOTH commissionMonth (string) and commissionDate (Timestamp) fields
+      const commissionDate = issuedDate ? Timestamp.fromDate(issuedDate) : null;
+      
       const orderData = {
         soNumber: soNum,
         salesOrderId: String(salesOrderId),
@@ -312,6 +316,7 @@ async function processDataInBackground(
         postingDate: postingDate,
         commissionMonth: commissionMonth,
         commissionYear: commissionYear,
+        commissionDate: commissionDate,
         // CRITICAL: salesPerson (Column T) is the ONLY field used for commission calculation
         salesPerson: String(row['Sales person'] || '').trim(),
         // salesRep is stored for reporting only - NOT used in commission calculation
@@ -389,6 +394,9 @@ async function processDataInBackground(
       }
     }
     
+    // CRITICAL: commission-calculator.ts queries by commissionDate field
+    const itemCommissionDate = itemIssuedDate ? Timestamp.fromDate(itemIssuedDate) : null;
+    
     batch.set(itemRef, {
       soNumber: soNum,
       salesOrderId: String(salesOrderId),
@@ -402,6 +410,7 @@ async function processDataInBackground(
       postingDate: itemIssuedDate ? Timestamp.fromDate(itemIssuedDate) : null,
       commissionMonth: itemCommissionMonth,
       commissionYear: itemCommissionYear,
+      commissionDate: itemCommissionDate,
       salesPerson: String(row['Sales person'] || '').trim(),
       updatedAt: Timestamp.now()
     }, { merge: true });
