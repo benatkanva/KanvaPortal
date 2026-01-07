@@ -306,6 +306,70 @@ service cloud.firestore {
       allow write: if false;
     }
     
+    // ShipStation webhook logs
+    match /shipstation_webhook_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ========== SAIA LTL SHIPPING ==========
+    
+    // SAIA shipments (LTL tracking)
+    match /saia_shipments/{proNumber} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // SAIA import logs
+    match /saia_import_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ========== NOTIFICATIONS ==========
+    
+    // Notifications - users can read their own, system can write
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && 
+                     (resource.data.userEmail == request.auth.token.email || 
+                      resource.data.userId == request.auth.uid);
+      allow write: if true; // Allow server-side writes
+      allow update: if request.auth != null && 
+                       (resource.data.userEmail == request.auth.token.email || 
+                        resource.data.userId == request.auth.uid);
+    }
+    
+    // Notification preferences
+    match /notification_preferences/{userId} {
+      allow read: if request.auth != null && 
+                     (request.auth.uid == userId || 
+                      request.auth.token.email == resource.data.userEmail);
+      allow write: if request.auth != null && 
+                      (request.auth.uid == userId);
+    }
+    
+    // ========== QUOTES ==========
+    
+    // Quotes - users can read/write their own quotes
+    match /quotes/{quoteId} {
+      allow read: if request.auth != null && 
+                     (resource.data.createdBy == request.auth.uid || 
+                      resource.data.assignedTo == request.auth.uid);
+      allow create: if request.auth != null && 
+                       request.resource.data.createdBy == request.auth.uid;
+      allow update: if request.auth != null && 
+                       (resource.data.createdBy == request.auth.uid || 
+                        resource.data.assignedTo == request.auth.uid);
+      allow delete: if request.auth != null && 
+                       resource.data.createdBy == request.auth.uid;
+    }
+    
+    // Quote activities - users can read activities for their quotes
+    match /quote_activities/{activityId} {
+      allow read: if request.auth != null;
+      allow write: if true; // Allow server-side writes for activity logging
+    }
+    
     // ========== ANALYTICS ==========
     
     // Analytics

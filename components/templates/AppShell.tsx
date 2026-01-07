@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import UserMenu from '@/components/layout/UserMenu';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -144,9 +145,10 @@ export default function AppShell({ children }: AppShellProps) {
               </nav>
             )}
 
-            {/* User Menu */}
+            {/* Notifications & User Menu */}
             {user && (
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                <NotificationBell />
                 <UserMenu query={query} />
               </div>
             )}

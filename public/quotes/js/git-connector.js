@@ -29,72 +29,16 @@ class GitConnector {
     }
     
     /**
-     * Load GitHub connection from server or localStorage
+     * Load GitHub connection from localStorage only
+     * Note: GitHub integration disabled - data now managed in Firestore
      */
     async loadConnectionFromServer() {
-        try {
-            // Check if we're running on GitHub Pages (no local server)
-            const isGitHubPages = window.location.hostname.includes('github.io');
-            
-            if (isGitHubPages) {
-                // Running on GitHub Pages - load from localStorage only
-                console.log('💾 Loading GitHub connection from localStorage (GitHub Pages mode)');
-                this.loadFromLocalStorage();
-                return;
-            }
-            
-            // Running locally - try server endpoints
-            // First try to load from secure env-config endpoint
-            const envResponse = await fetch('/api/env-config');
-            
-            if (envResponse.ok) {
-                const envResult = await envResponse.json();
-                
-                if (envResult.success && envResult.data && envResult.data.github) {
-                    const githubConfig = envResult.data.github;
-                    
-                    // Update configuration from environment variables
-                    if (githubConfig.token) this.token = githubConfig.token;
-                    if (githubConfig.repo) this.repo = githubConfig.repo;
-                    if (githubConfig.branch) this.branch = githubConfig.branch;
-                    if (githubConfig.username) this.username = githubConfig.username;
-                    if (githubConfig.email) this.email = githubConfig.email;
-                    
-                    console.log('✅ GitHub connection loaded from environment variables');
-                    return;
-                }
-            }
-            
-            // Fall back to connections.json if env-config fails
-            const response = await fetch('/api/connections');
-            
-            if (response.ok) {
-                const result = await response.json();
-                
-                if (result.success && result.data && result.data.github) {
-                    const githubConfig = result.data.github;
-                    
-                    // Update configuration from saved connections
-                    if (githubConfig.token) this.token = githubConfig.token;
-                    if (githubConfig.repo) this.repo = githubConfig.repo;
-                    if (githubConfig.branch) this.branch = githubConfig.branch;
-                    if (githubConfig.username) this.username = githubConfig.username;
-                    if (githubConfig.email) this.email = githubConfig.email;
-                    
-                    console.log('✅ GitHub connection loaded from saved connections');
-                    return;
-                }
-            }
-            
-            // Final fallback to localStorage
-            console.warn('⚠️ Could not load GitHub connection from server, trying localStorage');
-            this.loadFromLocalStorage();
-            
-        } catch (error) {
-            console.warn('⚠️ Failed to load GitHub connection from server:', error);
-            // Load from localStorage as fallback
-            this.loadFromLocalStorage();
-        }
+        // GitHub integration is disabled - we no longer pull data from GitHub
+        // All data is now managed in Firestore
+        console.log('ℹ️ GitHub integration disabled - using Firestore for data management');
+        
+        // Load from localStorage if needed for legacy compatibility
+        this.loadFromLocalStorage();
     }
     
     /**

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import SAIAShippingDashboard from '@/components/shipping/saia/SAIAShippingDashboard';
 import { 
   Package, 
   Search, 
@@ -29,6 +30,11 @@ import toast from 'react-hot-toast';
 
 export default function ShipmentsPage() {
   const { user } = useAuth();
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'shipstation' | 'ltl'>('shipstation');
+  
+  // ShipStation state
   const [orders, setOrders] = useState<ShipStationOrder[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<ShipStationOrder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -289,30 +295,65 @@ export default function ShipmentsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Shipments</h1>
-            <p className="text-sm text-gray-500">Track orders and shipments from ShipStation</p>
+            <p className="text-sm text-gray-500">Track orders and shipments</p>
           </div>
         </div>
         
+        {activeTab === 'shipstation' && (
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing...' : 'Sync to Cache'}
+          </button>
+        )}
+        
+        {activeTab === 'ltl' && (
+          <div className="text-sm text-gray-500">
+            Data synced from Firebase Realtime Database
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-200">
         <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          onClick={() => setActiveTab('shipstation')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            activeTab === 'shipstation'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
         >
-          <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Syncing...' : 'Sync to Cache'}
+          📦 ShipStation
+        </button>
+        <button
+          onClick={() => setActiveTab('ltl')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            activeTab === 'ltl'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          🚚 LTL (SAIA)
         </button>
       </div>
 
-      {/* Sync Status */}
-      {syncMeta && (
-        <div className="text-xs text-gray-500">
-          Last sync: {syncMeta.lastRunAt ? new Date((syncMeta.lastRunAt as any).seconds * 1000).toLocaleString() : 'Never'} 
-          {' '}• Status: <span className={syncMeta.status === 'success' ? 'text-green-600' : syncMeta.status === 'error' ? 'text-red-600' : 'text-yellow-600'}>{syncMeta.status}</span>
-          {syncMeta.ordersProcessed > 0 && ` • ${syncMeta.ordersProcessed} orders cached`}
-        </div>
-      )}
+      {/* ShipStation Tab Content */}
+      {activeTab === 'shipstation' && (
+        <>
+          {/* Sync Status */}
+          {syncMeta && (
+            <div className="text-xs text-gray-500">
+              Last sync: {syncMeta.lastRunAt ? new Date((syncMeta.lastRunAt as any).seconds * 1000).toLocaleString() : 'Never'} 
+              {' '}• Status: <span className={syncMeta.status === 'success' ? 'text-green-600' : syncMeta.status === 'error' ? 'text-red-600' : 'text-yellow-600'}>{syncMeta.status}</span>
+              {syncMeta.ordersProcessed > 0 && ` • ${syncMeta.ordersProcessed} orders cached`}
+            </div>
+          )}
 
-      {/* Filters */}
+          {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
         {/* Date Range and Search */}
         <div className="flex flex-wrap items-center gap-4">
@@ -651,6 +692,16 @@ export default function ShipmentsPage() {
           </div>
         )}
       </div>
+        </>
+      )}
+
+      {/* LTL Tab Content */}
+      {activeTab === 'ltl' && (
+        <>
+          {/* SAIA Dashboard - Using Firebase Realtime Database */}
+          <SAIAShippingDashboard />
+        </>
+      )}
     </div>
   );
 }
