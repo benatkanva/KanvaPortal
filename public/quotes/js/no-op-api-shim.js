@@ -1,4 +1,4 @@
-/**
+/*
  * No-Op API Shim for Legacy kanva-quotes
  * 
  * This file intercepts fetch calls to old API endpoints that no longer exist

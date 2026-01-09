@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { db } from '@/lib/firebase/config';
 import { collection, getDocs } from 'firebase/firestore';
 import Link from 'next/link';
@@ -335,9 +335,8 @@ export default function ProductCatalogPage() {
                   </tr>
                 ) : (
                   filteredProducts.map((product) => (
-                    <>
+                    <React.Fragment key={product.id}>
                     <tr 
-                      key={product.id} 
                       className={`cursor-pointer hover:bg-gray-50 ${expandedRows.has(product.id) ? 'bg-gray-50 border-b-0' : ''}`}
                       onClick={(e) => {
                         if ((e.target as HTMLElement).closest('a')) return;
@@ -437,7 +436,7 @@ export default function ProductCatalogPage() {
                     
                     {/* Expanded Row Details */}
                     {expandedRows.has(product.id) && (
-                      <tr key={`${product.id}-details`} className="bg-gray-50 border-t-0">
+                      <tr className="bg-gray-50 border-t-0">
                         <td colSpan={10} className="px-6 py-4">
                           <div className="grid grid-cols-3 gap-6 text-sm">
                             <div>
@@ -501,7 +500,7 @@ export default function ProductCatalogPage() {
                         </td>
                       </tr>
                     )}
-                    </>
+                    </React.Fragment>
                   ))
                 )}
               </tbody>

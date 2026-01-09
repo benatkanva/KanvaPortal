@@ -9,14 +9,14 @@ import {
 import AdminBreadcrumbs from '@/components/admin/AdminBreadcrumbs';
 import { db, storage } from '@/lib/firebase/config';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { ProductStyle, ProductSKU, ProductHierarchyView } from '@/types/product-hierarchy';
+import { ProductFamily, ProductSKU, ProductHierarchyView } from '@/types/product-hierarchy';
 import toast from 'react-hot-toast';
 
 export default function ProductHierarchyPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [hierarchies, setHierarchies] = useState<ProductHierarchyView[]>([]);
-  const [expandedStyles, setExpandedStyles] = useState<Set<string>>(new Set());
+  const [expandedFamilies, setExpandedFamilies] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -35,24 +35,24 @@ export default function ProductHierarchyPage() {
       const productsRef = collection(db, 'products');
       const snapshot = await getDocs(productsRef);
       
-      // Group products by style (using productDescription as style name for now)
-      const styleMap = new Map<string, ProductHierarchyView>();
+      // Group products by product family (using productDescription as family name for now)
+      const familyMap = new Map<string, ProductHierarchyView>();
       
       snapshot.docs.forEach(doc => {
         const data = doc.data();
         
-        // Use productDescription as the style name
-        // In the future, we'll have a separate styles collection
-        const styleName = data.productDescription?.split(' - ')[0] || data.productDescription || 'Unnamed Style';
+        // Use productDescription as the product family name
+        // In the future, we'll have a separate product_families collection
+        const familyName = data.productDescription?.split(' - ')[0] || data.productDescription || 'Unnamed Product Family';
         const brand = data.brand || 'Kanva Botanicals';
         
-        if (!styleMap.has(styleName)) {
-          // Create a new style entry
-          styleMap.set(styleName, {
-            style: {
-              id: styleName.replace(/\s+/g, '-').toLowerCase(),
-              styleId: styleName.replace(/\s+/g, '-').toLowerCase(),
-              styleName: styleName,
+        if (!familyMap.has(familyName)) {
+          // Create a new product family entry
+          familyMap.set(familyName, {
+            family: {
+              id: familyName.replace(/\s+/g, '-').toLowerCase(),
+              familyId: familyName.replace(/\s+/g, '-').toLowerCase(),
+              familyName: familyName,
               brand: brand,
               category: data.category || 'Other',
               productType: data.productType || '',
@@ -71,11 +71,11 @@ export default function ProductHierarchyPage() {
         }
         
         // Add this product as a SKU
-        const hierarchy = styleMap.get(styleName)!;
+        const hierarchy = familyMap.get(familyName)!;
         hierarchy.skus.push({
           id: doc.id,
           skuId: data.productNum || doc.id,
-          styleId: styleName.replace(/\s+/g, '-').toLowerCase(),
+          familyId: familyName.replace(/\s+/g, '-').toLowerCase(),
           skuName: data.productDescription || '',
           variantType: data.variantType || data.productType || '',
           size: data.size || '',
@@ -99,12 +99,12 @@ export default function ProductHierarchyPage() {
         });
       });
       
-      const hierarchyArray = Array.from(styleMap.values());
+      const hierarchyArray = Array.from(familyMap.values());
       setHierarchies(hierarchyArray);
       
       // Extract unique brands and categories
-      const uniqueBrands = Array.from(new Set(hierarchyArray.map(h => h.style.brand)));
-      const uniqueCategories = Array.from(new Set(hierarchyArray.map(h => h.style.category)));
+      const uniqueBrands = Array.from(new Set(hierarchyArray.map(h => h.family.brand)));
+      const uniqueCategories = Array.from(new Set(hierarchyArray.map(h => h.family.category)));
       setBrands(uniqueBrands);
       setCategories(uniqueCategories);
       
@@ -116,26 +116,26 @@ export default function ProductHierarchyPage() {
     }
   }
 
-  function toggleStyle(styleId: string) {
-    const newExpanded = new Set(expandedStyles);
-    if (newExpanded.has(styleId)) {
-      newExpanded.delete(styleId);
+  function toggleFamily(familyId: string) {
+    const newExpanded = new Set(expandedFamilies);
+    if (newExpanded.has(familyId)) {
+      newExpanded.delete(familyId);
     } else {
-      newExpanded.add(styleId);
+      newExpanded.add(familyId);
     }
-    setExpandedStyles(newExpanded);
+    setExpandedFamilies(newExpanded);
   }
 
-  function handleCreateStyle() {
-    router.push('/admin/product-hierarchy/create-style');
+  function handleCreateFamily() {
+    router.push('/admin/product-hierarchy/create-family');
   }
 
-  function handleEditStyle(styleId: string) {
-    router.push(`/admin/product-hierarchy/style/${styleId}`);
+  function handleEditFamily(familyId: string) {
+    router.push(`/admin/product-hierarchy/family/${familyId}`);
   }
 
-  function handleCreateSKU(styleId: string) {
-    router.push(`/admin/product-hierarchy/create-sku?styleId=${styleId}`);
+  function handleCreateSKU(familyId: string) {
+    router.push(`/admin/product-hierarchy/create-sku?familyId=${familyId}`);
   }
 
   function handleEditSKU(skuId: string) {
@@ -144,11 +144,11 @@ export default function ProductHierarchyPage() {
 
   const filteredHierarchies = hierarchies.filter(h => {
     const matchesSearch = searchTerm === '' || 
-      h.style.styleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      h.family.familyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       h.skus.some(sku => sku.skuId.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesBrand = selectedBrand === 'all' || h.style.brand === selectedBrand;
-    const matchesCategory = selectedCategory === 'all' || h.style.category === selectedCategory;
+    const matchesBrand = selectedBrand === 'all' || h.family.brand === selectedBrand;
+    const matchesCategory = selectedCategory === 'all' || h.family.category === selectedCategory;
     
     return matchesSearch && matchesBrand && matchesCategory;
   });
@@ -184,21 +184,21 @@ export default function ProductHierarchyPage() {
               <h1 className="text-2xl font-bold text-gray-900">Product Hierarchy</h1>
             </div>
             <button
-              onClick={handleCreateStyle}
+              onClick={handleCreateFamily}
               className="btn btn-primary"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Create New Style
+              Create New Product Family
             </button>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-blue-900 mb-2">Product Hierarchy Structure:</h3>
             <p className="text-sm text-blue-800">
-              <strong>Brand</strong> → <strong>Style</strong> → <strong>SKU</strong>
+              <strong>Brand</strong> → <strong>Product Family</strong> → <strong>SKU</strong>
             </p>
             <p className="text-sm text-blue-700 mt-2">
-              Styles contain shared images and information. SKUs are individual product variants (Master Case, Box, Unit) with optional unique images.
+              Product Families contain shared images and information. SKUs are individual product variants (Master Case, Box, Unit) with optional unique images.
             </p>
           </div>
 
@@ -210,7 +210,7 @@ export default function ProductHierarchyPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search styles or SKUs..."
+                placeholder="Search product families or SKUs..."
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
@@ -245,15 +245,15 @@ export default function ProductHierarchyPage() {
               </div>
             ) : (
               filteredHierarchies.map(hierarchy => {
-                const isExpanded = expandedStyles.has(hierarchy.style.styleId);
+                const isExpanded = expandedFamilies.has(hierarchy.family.familyId);
                 
                 return (
-                  <div key={hierarchy.style.styleId} className="border border-gray-200 rounded-lg overflow-hidden">
-                    {/* Style Row */}
+                  <div key={hierarchy.family.familyId} className="border border-gray-200 rounded-lg overflow-hidden">
+                    {/* Product Family Row */}
                     <div className="bg-white hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-4 p-4">
                         <button
-                          onClick={() => toggleStyle(hierarchy.style.styleId)}
+                          onClick={() => toggleFamily(hierarchy.family.familyId)}
                           className="text-gray-500 hover:text-gray-700"
                         >
                           {isExpanded ? (
@@ -263,11 +263,11 @@ export default function ProductHierarchyPage() {
                           )}
                         </button>
                         
-                        {hierarchy.style.mainImage && (
+                        {hierarchy.family.mainImage && (
                           <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                             <img
-                              src={hierarchy.style.mainImage.startsWith('http') ? hierarchy.style.mainImage : `https://${hierarchy.style.mainImage.replace(/^https?:\/\//, '')}`}
-                              alt={hierarchy.style.styleName}
+                              src={hierarchy.family.mainImage.startsWith('http') ? hierarchy.family.mainImage : `https://${hierarchy.family.mainImage.replace(/^https?:\/\//, '')}`}
+                              alt={hierarchy.family.familyName}
                               className="w-full h-full object-contain"
                             />
                           </div>
@@ -275,22 +275,22 @@ export default function ProductHierarchyPage() {
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-gray-900">{hierarchy.style.styleName}</h3>
-                            {!hierarchy.style.isActive && (
+                            <h3 className="font-semibold text-gray-900">{hierarchy.family.familyName}</h3>
+                            {!hierarchy.family.isActive && (
                               <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
                                 Inactive
                               </span>
                             )}
-                            {hierarchy.style.showInQuoteTool && (
+                            {hierarchy.family.showInQuoteTool && (
                               <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">
                                 Quote Tool
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <span>{hierarchy.style.brand}</span>
+                            <span>{hierarchy.family.brand}</span>
                             <span>•</span>
-                            <span>{hierarchy.style.category}</span>
+                            <span>{hierarchy.family.category}</span>
                             <span>•</span>
                             <span className="font-medium">{hierarchy.skus.length} SKU{hierarchy.skus.length !== 1 ? 's' : ''}</span>
                           </div>
@@ -298,14 +298,14 @@ export default function ProductHierarchyPage() {
                         
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleCreateSKU(hierarchy.style.styleId)}
+                            onClick={() => handleCreateSKU(hierarchy.family.familyId)}
                             className="btn btn-sm btn-secondary"
                           >
                             <Plus className="w-3 h-3 mr-1" />
                             Add SKU
                           </button>
                           <button
-                            onClick={() => handleEditStyle(hierarchy.style.styleId)}
+                            onClick={() => handleEditFamily(hierarchy.family.familyId)}
                             className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                           >
                             <Edit className="w-4 h-4" />
@@ -319,9 +319,9 @@ export default function ProductHierarchyPage() {
                       <div className="bg-gray-50 border-t border-gray-200">
                         {hierarchy.skus.length === 0 ? (
                           <div className="p-8 text-center text-gray-500">
-                            <p className="mb-3">No SKUs for this style yet</p>
+                            <p className="mb-3">No SKUs for this product family yet</p>
                             <button
-                              onClick={() => handleCreateSKU(hierarchy.style.styleId)}
+                              onClick={() => handleCreateSKU(hierarchy.family.familyId)}
                               className="btn btn-sm btn-primary"
                             >
                               <Plus className="w-3 h-3 mr-1" />

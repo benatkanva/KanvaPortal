@@ -58,8 +58,8 @@ export default function Sidebar({ query = '' }: SidebarProps) {
     {
       name: 'Products',
       href: `/products${query}`,
-      icon: BookOpen,
-      active: pathname?.startsWith('/products')
+      icon: Package,
+      active: pathname?.startsWith('/products') && !pathname?.startsWith('/admin/products')
     },
     {
       name: 'Shipments',

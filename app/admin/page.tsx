@@ -60,118 +60,126 @@ export default function AdminPage() {
   // Overview Dashboard Component
   const OverviewDashboard = () => (
     <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-500">Total Users</span>
+            <Users className="w-4 h-4 text-gray-400" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">-</p>
+          <p className="text-xs text-gray-500 mt-1">Active team members</p>
+        </div>
+        
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-500">Products</span>
+            <Package className="w-4 h-4 text-gray-400" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">-</p>
+          <p className="text-xs text-gray-500 mt-1">In catalog</p>
+        </div>
+        
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-500">Active Goals</span>
+            <Target className="w-4 h-4 text-gray-400" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">-</p>
+          <p className="text-xs text-gray-500 mt-1">Team targets</p>
+        </div>
+        
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-500">Integrations</span>
+            <Plug className="w-4 h-4 text-gray-400" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">3</p>
+          <p className="text-xs text-gray-500 mt-1">Connected services</p>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Admin Activity</h3>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-gray-600">System running normally</span>
+            <span className="ml-auto text-gray-400">Just now</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span className="text-gray-600">All integrations connected</span>
+            <span className="ml-auto text-gray-400">5 min ago</span>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* User Management Card */}
-        <Link href="/admin/users" className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="bg-orange-500 p-3 rounded-lg">
-              <Users className="w-6 h-6 text-white" />
-            </div>
+        {/* System Settings */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-gray-600" />
+            System Settings
+          </h3>
+          <div className="space-y-3">
+            <Link href="/admin/users" className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <Users className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">User Management</span>
+              </div>
+              <span className="text-xs text-gray-400">→</span>
+            </Link>
+            <Link href="/admin/goals" className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <Target className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">Team Goals</span>
+              </div>
+              <span className="text-xs text-gray-400">→</span>
+            </Link>
+            <Link href="/settings" className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <DollarSign className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">Commission Settings</span>
+              </div>
+              <span className="text-xs text-gray-400">→</span>
+            </Link>
           </div>
-          <h3 className="text-lg font-semibold text-orange-900 mb-2">User Management</h3>
-          <p className="text-sm text-orange-700 mb-4">Manage users, sales team roster, and organizational structure.</p>
-          <div className="flex items-center text-orange-600 text-sm font-medium">
-            Manage Users →
-          </div>
-        </Link>
+        </div>
 
-        {/* Sales Insights Card */}
-        <Link href="/admin/sales-insights" className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="bg-blue-500 p-3 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-white" />
+        {/* Integrations */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Plug className="w-5 h-5 text-gray-600" />
+            Integrations
+          </h3>
+          <div className="space-y-3">
+            <Link href="/admin/tools" className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <Wrench className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">Import Tools</span>
+              </div>
+              <span className="text-xs text-gray-400">→</span>
+            </Link>
+            <Link href="/admin/justcall" className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <Phone className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">JustCall</span>
+              </div>
+              <span className="text-xs text-gray-400">→</span>
+            </Link>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+              <div className="flex items-center gap-3">
+                <Database className="w-4 h-4 text-green-500" />
+                <span className="text-sm font-medium text-gray-700">Copper CRM</span>
+              </div>
+              <span className="text-xs text-green-600">Connected</span>
             </div>
           </div>
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">Sales Insights</h3>
-          <p className="text-sm text-blue-700 mb-4">View team performance, metrics, and analytics.</p>
-          <div className="flex items-center text-blue-600 text-sm font-medium">
-            View Insights →
-          </div>
-        </Link>
-
-        {/* Products Card */}
-        <Link href="/admin/products" className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-6 border border-teal-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="bg-teal-500 p-3 rounded-lg">
-              <Package className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-teal-900 mb-2">Product Management</h3>
-          <p className="text-sm text-teal-700 mb-4">Manage products, pricing tiers, and inventory settings.</p>
-          <div className="flex items-center text-teal-600 text-sm font-medium">
-            Manage Products →
-          </div>
-        </Link>
-
-        {/* Product Hierarchy Card */}
-        <Link href="/admin/product-hierarchy" className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="bg-emerald-500 p-3 rounded-lg">
-              <Package className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-emerald-900 mb-2">Product Hierarchy</h3>
-          <p className="text-sm text-emerald-700 mb-4">Manage product families: Brand → Style → SKU structure.</p>
-          <div className="flex items-center text-emerald-600 text-sm font-medium">
-            Manage Hierarchy →
-          </div>
-        </Link>
-
-        {/* Goals Card */}
-        <Link href="/admin/goals" className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="bg-green-500 p-3 rounded-lg">
-              <Target className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-green-900 mb-2">Team Goals</h3>
-          <p className="text-sm text-green-700 mb-4">Set and track team goals and targets.</p>
-          <div className="flex items-center text-green-600 text-sm font-medium">
-            Manage Goals →
-          </div>
-        </Link>
-
-        {/* Import Tools Card */}
-        <Link href="/admin/tools" className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="bg-purple-500 p-3 rounded-lg">
-              <Wrench className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-purple-900 mb-2">Import Tools</h3>
-          <p className="text-sm text-purple-700 mb-4">Import data from Copper CRM, Fishbowl ERP, and other sources.</p>
-          <div className="flex items-center text-purple-600 text-sm font-medium">
-            Open Tools →
-          </div>
-        </Link>
-
-        {/* JustCall Card */}
-        <Link href="/admin/justcall" className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div className="bg-indigo-500 p-3 rounded-lg">
-              <Phone className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-indigo-900 mb-2">JustCall Integration</h3>
-          <p className="text-sm text-indigo-700 mb-4">Sync call data and manage phone integrations.</p>
-          <div className="flex items-center text-indigo-600 text-sm font-medium">
-            Configure JustCall →
-          </div>
-        </Link>
+        </div>
       </div>
 
-      {/* Commission Settings Notice */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <h4 className="font-medium text-amber-800 mb-2 flex items-center gap-2">
-          <DollarSign className="w-5 h-5" />
-          Commission Settings
-        </h4>
-        <p className="text-sm text-amber-700">
-          <strong>Commission-specific settings</strong> (commission rates, rules, customers, products) 
-          are managed in the <Link href="/settings" className="underline font-medium hover:text-amber-900">Commission Settings page</Link>.
-          User management is centralized here in Admin.
-        </p>
-      </div>
     </div>
   );
 

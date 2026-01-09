@@ -11,7 +11,8 @@ import {
   Phone,
   Wrench,
   BarChart3,
-  Building2
+  Building2,
+  Package
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -21,6 +22,7 @@ interface AdminLayoutProps {
 const adminNavItems = [
   { name: 'Overview', href: '/admin', icon: BarChart3 },
   { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Products', href: '/admin/products', icon: Package },
   { name: 'Goals', href: '/admin/goals', icon: Target },
   { name: 'Sales Insights', href: '/admin/sales-insights', icon: BarChart3 },
   { name: 'JustCall', href: '/admin/justcall', icon: Phone },

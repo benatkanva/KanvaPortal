@@ -1,21 +1,21 @@
 /**
  * Product Hierarchy Types
- * Structure: Brand > Style > SKU
+ * Structure: Brand > Product Family > SKU
  */
 
-export interface ProductStyle {
+export interface ProductFamily {
   id: string;
-  styleId: string; // Unique identifier for the style
-  styleName: string; // e.g., "Focus + Flow"
+  familyId: string; // Unique identifier for the product family
+  familyName: string; // e.g., "Focus + Flow"
   brand: string; // e.g., "Kanva Botanicals"
   category: string;
   productType: string;
   
-  // Shared information for all SKUs under this style
+  // Shared information for all SKUs under this product family
   description: string;
   notes?: string;
   
-  // Shared images for the style (all SKUs inherit these)
+  // Shared images for the product family (all SKUs inherit these)
   images: string[]; // Array of Firebase Storage URLs
   mainImage: string; // Primary image URL
   
@@ -31,7 +31,7 @@ export interface ProductStyle {
 export interface ProductSKU {
   id: string;
   skuId: string; // Product number/SKU (e.g., "KB-2000")
-  styleId: string; // Reference to parent style
+  familyId: string; // Reference to parent product family
   
   // SKU-specific information
   skuName: string; // e.g., "Master Case MC12", "Box", "Unit"
@@ -39,7 +39,7 @@ export interface ProductSKU {
   size: string; // e.g., "MC12", "12pk", "1pk"
   uom: string; // Unit of measure
   
-  // SKU-specific image (optional - if not set, uses parent style images)
+  // SKU-specific image (optional - if not set, uses parent product family images)
   skuImage?: string; // Single image specific to this SKU
   
   // Pricing and inventory
@@ -80,6 +80,6 @@ export interface ProductSKU {
 }
 
 export interface ProductHierarchyView {
-  style: ProductStyle;
+  family: ProductFamily;
   skus: ProductSKU[];
 }
