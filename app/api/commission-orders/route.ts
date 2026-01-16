@@ -20,11 +20,13 @@ export async function GET(request: NextRequest) {
 
     console.log(`📊 Fetching commission orders for ${year}-${month}${salesPerson ? ` (${salesPerson})` : ''}`);
 
-    // Query fishbowl_sales_orders collection
+    // Build commission month string (e.g., "12-2025")
+    const commissionMonth = `${month.padStart(2, '0')}-${year}`;
+
+    // Query monthly_commissions collection (same as reports page)
     let query = adminDb
-      .collection('fishbowl_sales_orders')
-      .where('commissionYear', '==', parseInt(year))
-      .where('commissionMonth', '==', parseInt(month));
+      .collection('monthly_commissions')
+      .where('commissionMonth', '==', commissionMonth);
 
     // Add sales person filter if provided
     if (salesPerson && salesPerson !== 'all') {
@@ -33,48 +35,29 @@ export async function GET(request: NextRequest) {
 
     const snapshot = await query.get();
 
-    console.log(`📦 Found ${snapshot.size} orders in fishbowl_sales_orders`);
+    console.log(`📦 Found ${snapshot.size} commission records for ${commissionMonth}`);
 
-    // Get line items for each order to calculate totals
-    const orders = await Promise.all(
-      snapshot.docs.map(async (doc) => {
-        const data = doc.data();
-        
-        // Get line items for this order
-        const lineItemsSnapshot = await adminDb
-          .collection('sales_order_line_items')
-          .where('salesOrderId', '==', data.salesOrderId)
-          .get();
-
-        // Calculate total from line items
-        let totalPrice = 0;
-        const productDetails: string[] = [];
-
-        lineItemsSnapshot.docs.forEach(lineDoc => {
-          const lineData = lineDoc.data();
-          const itemTotal = (lineData.totalPrice || 0);
-          totalPrice += itemTotal;
-          
-          if (lineData.productNum) {
-            productDetails.push(`${lineData.productNum} (${lineData.qtyFulfilled || 0})`);
-          }
-        });
-
-        return {
-          id: doc.id,
-          soNumber: data.soNumber || '',
-          salesOrderId: data.salesOrderId || '',
-          customerName: data.customerName || '',
-          salesPerson: data.salesPerson || '',
-          postingDate: data.postingDate || data.commissionDate || '',
-          totalPrice: totalPrice,
-          accountType: data.accountType || 'Unknown',
-          excludeFromCommission: data.excludeFromCommission || false,
-          commissionNote: data.commissionNote || '',
-          productDetails: productDetails.join(', ')
-        };
-      })
-    );
+    // Map commission records to order format
+    const orders = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      
+      return {
+        id: doc.id,
+        soNumber: data.orderNum || '',
+        salesOrderId: data.salesOrderId || '',
+        customerName: data.customerName || '',
+        salesPerson: data.salesPerson || '',
+        postingDate: data.orderDate || '',
+        totalPrice: data.orderRevenue || 0,
+        commissionAmount: data.commissionAmount || 0,
+        commissionRate: data.commissionRate || 0,
+        accountType: data.accountType || data.customerSegment || 'Unknown',
+        excludeFromCommission: data.excludeFromCommission || false,
+        commissionNote: data.commissionNote || '',
+        customerSegment: data.customerSegment || '',
+        customerStatus: data.customerStatus || ''
+      };
+    });
 
     // Sort by posting date descending
     orders.sort((a, b) => {

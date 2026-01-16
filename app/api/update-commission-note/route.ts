@@ -19,19 +19,19 @@ export async function POST(request: NextRequest) {
 
     console.log(`📝 Updating commission note for order ${orderId}`);
 
-    // Update the order in fishbowl_sales_orders
-    const orderRef = adminDb.collection('fishbowl_sales_orders').doc(orderId);
-    const orderDoc = await orderRef.get();
+    // Update the commission record in monthly_commissions
+    const commissionRef = adminDb.collection('monthly_commissions').doc(orderId);
+    const commissionDoc = await commissionRef.get();
 
-    if (!orderDoc.exists) {
+    if (!commissionDoc.exists) {
       return NextResponse.json(
-        { error: 'Order not found' },
+        { error: 'Commission record not found' },
         { status: 404 }
       );
     }
 
     // Update the note
-    await orderRef.update({
+    await commissionRef.update({
       commissionNote: note || '',
       commissionNoteUpdatedAt: FieldValue.serverTimestamp(),
       commissionNoteUpdatedBy: 'admin' // TODO: Get actual user email from auth

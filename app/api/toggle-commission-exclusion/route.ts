@@ -19,21 +19,21 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔄 ${exclude ? 'Excluding' : 'Including'} order ${orderId} from commissions`);
 
-    // Update the order in fishbowl_sales_orders
-    const orderRef = adminDb.collection('fishbowl_sales_orders').doc(orderId);
-    const orderDoc = await orderRef.get();
+    // Update the commission record in monthly_commissions
+    const commissionRef = adminDb.collection('monthly_commissions').doc(orderId);
+    const commissionDoc = await commissionRef.get();
 
-    if (!orderDoc.exists) {
+    if (!commissionDoc.exists) {
       return NextResponse.json(
-        { error: 'Order not found' },
+        { error: 'Commission record not found' },
         { status: 404 }
       );
     }
 
-    const orderData = orderDoc.data();
+    const orderData = commissionDoc.data();
     
     // Update the exclusion flag
-    await orderRef.update({
+    await commissionRef.update({
       excludeFromCommission: exclude,
       excludeFromCommissionUpdatedAt: FieldValue.serverTimestamp(),
       excludeFromCommissionUpdatedBy: 'admin' // TODO: Get actual user email from auth
@@ -74,56 +74,49 @@ export async function POST(request: NextRequest) {
 }
 
 async function recalculateMonthCommissions(salesPerson: string, month: number, year: number) {
-  // Get all orders for this rep/month that are NOT excluded
-  const ordersSnapshot = await adminDb
-    .collection('fishbowl_sales_orders')
+  // Build commission month string
+  const commissionMonth = `${String(month).padStart(2, '0')}-${year}`;
+  
+  // Get all commission records for this rep/month
+  const commissionsSnapshot = await adminDb
+    .collection('monthly_commissions')
     .where('salesPerson', '==', salesPerson)
-    .where('commissionMonth', '==', month)
-    .where('commissionYear', '==', year)
+    .where('commissionMonth', '==', commissionMonth)
     .get();
 
   let totalRevenue = 0;
+  let totalCommission = 0;
   let orderCount = 0;
   const processedOrders: string[] = [];
 
-  for (const orderDoc of ordersSnapshot.docs) {
-    const orderData = orderDoc.data();
+  for (const commissionDoc of commissionsSnapshot.docs) {
+    const commissionData = commissionDoc.data();
     
     // Skip excluded orders
-    if (orderData.excludeFromCommission) {
-      console.log(`  ⏭️  Skipping excluded order: ${orderData.soNumber}`);
+    if (commissionData.excludeFromCommission) {
+      console.log(`  ⏭️  Skipping excluded order: ${commissionData.orderNum}`);
       continue;
     }
 
-    // Get line items for this order
-    const lineItemsSnapshot = await adminDb
-      .collection('sales_order_line_items')
-      .where('salesOrderId', '==', orderData.salesOrderId)
-      .get();
-
-    let orderTotal = 0;
-    lineItemsSnapshot.docs.forEach(lineDoc => {
-      const lineData = lineDoc.data();
-      orderTotal += (lineData.totalPrice || 0);
-    });
-
-    totalRevenue += orderTotal;
+    totalRevenue += (commissionData.orderRevenue || 0);
+    totalCommission += (commissionData.commissionAmount || 0);
     orderCount++;
-    processedOrders.push(orderData.soNumber);
+    processedOrders.push(commissionData.orderNum);
   }
 
-  console.log(`  📊 Recalculated: ${orderCount} orders, $${totalRevenue.toLocaleString()} revenue`);
+  console.log(`  📊 Recalculated: ${orderCount} orders, $${totalRevenue.toLocaleString()} revenue, $${totalCommission.toLocaleString()} commission`);
 
   // Update the monthly commission summary
-  const summaryId = `${salesPerson}_${year}_${month}`;
-  const summaryRef = adminDb.collection('monthly_commissions').doc(summaryId);
+  const summaryId = `${salesPerson}_${commissionMonth}`;
+  const summaryRef = adminDb.collection('monthly_commission_summary').doc(summaryId);
   
   await summaryRef.set({
     salesPerson,
-    month,
+    month: commissionMonth,
     year,
     totalRevenue,
-    orderCount,
+    totalCommission,
+    totalOrders: orderCount,
     updatedAt: FieldValue.serverTimestamp(),
     recalculatedFromExclusion: true
   }, { merge: true });
