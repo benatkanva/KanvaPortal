@@ -45,6 +45,7 @@ export const HEADER_MAPPINGS: HeaderMapping[] = [
     aliases: [
       'so item id',
       'soitemid',
+      'soitem id',
       'so item',
       'line item id',
       'lineitemid',
