@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Edit3, Save, X, AlertCircle, CheckCircle, Search, Filter, RefreshCw } from 'lucide-react';
+import { Edit3, Save, X, AlertCircle, CheckCircle, Search, Filter, RefreshCw, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface SalesOrder {
@@ -19,6 +19,11 @@ interface SalesOrder {
   commissionRate?: number;
   customerSegment?: string;
   customerStatus?: string;
+  movedFromMonth?: string;
+  movedToMonth?: string;
+  moveReason?: string;
+  movedAt?: any;
+  movedBy?: string;
 }
 
 interface EditCommissionsTabProps {
@@ -37,6 +42,10 @@ export default function EditCommissionsTab({ isAdmin }: EditCommissionsTabProps)
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
   const [availableReps, setAvailableReps] = useState<string[]>([]);
+  const [movingOrderId, setMovingOrderId] = useState<string | null>(null);
+  const [moveToMonth, setMoveToMonth] = useState('');
+  const [moveToYear, setMoveToYear] = useState('');
+  const [moveReason, setMoveReason] = useState('');
 
   // Initialize with current month/year
   useEffect(() => {
@@ -184,6 +193,62 @@ export default function EditCommissionsTab({ isAdmin }: EditCommissionsTabProps)
   function cancelEditingNote() {
     setEditingNoteId(null);
     setNoteText('');
+  }
+
+  function startMovingOrder(orderId: string) {
+    if (!isAdmin) {
+      toast.error('Only admins can move orders');
+      return;
+    }
+    setMovingOrderId(orderId);
+    // Default to next month
+    const now = new Date();
+    setMoveToMonth(String(now.getMonth() + 2).padStart(2, '0'));
+    setMoveToYear(String(now.getFullYear()));
+    setMoveReason('');
+  }
+
+  function cancelMovingOrder() {
+    setMovingOrderId(null);
+    setMoveToMonth('');
+    setMoveToYear('');
+    setMoveReason('');
+  }
+
+  async function moveOrder() {
+    if (!movingOrderId || !moveToMonth || !moveToYear) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch('/api/move-commission-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: movingOrderId,
+          fromMonth: selectedMonth,
+          fromYear: selectedYear,
+          toMonth: moveToMonth,
+          toYear: moveToYear,
+          reason: moveReason
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to move order');
+
+      const data = await response.json();
+      
+      toast.success(`Order moved to ${moveToYear}-${moveToMonth}`);
+      
+      // Reload orders to reflect the change
+      await loadOrders();
+      
+      cancelMovingOrder();
+    } catch (error) {
+      console.error('Error moving order:', error);
+      toast.error('Failed to move order');
+    } finally {
+      setSaving(false);
+    }
   }
 
   const excludedCount = filteredOrders.filter(o => o.excludeFromCommission).length;
@@ -387,7 +452,17 @@ export default function EditCommissionsTab({ isAdmin }: EditCommissionsTabProps)
                       </button>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {order.soNumber}
+                      <div className="flex items-center gap-2">
+                        <span>{order.soNumber}</span>
+                        {order.movedFromMonth && (
+                          <span 
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"
+                            title={`Moved from ${order.movedFromMonth}${order.moveReason ? `: ${order.moveReason}` : ''}`}
+                          >
+                            📅 Moved
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900">
                       {order.customerName}
@@ -470,12 +545,22 @@ export default function EditCommissionsTab({ isAdmin }: EditCommissionsTabProps)
                             {order.commissionNote || 'No note'}
                           </span>
                           {isAdmin && (
-                            <button
-                              onClick={() => startEditingNote(order.id, order.commissionNote || '')}
-                              className="text-gray-400 hover:text-primary-600"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => startEditingNote(order.id, order.commissionNote || '')}
+                                className="text-gray-400 hover:text-primary-600"
+                                title="Edit note"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => startMovingOrder(order.id)}
+                                className="text-gray-400 hover:text-blue-600"
+                                title="Move to different month"
+                              >
+                                <Calendar className="w-3 h-3" />
+                              </button>
+                            </>
                           )}
                         </div>
                       )}
@@ -498,6 +583,126 @@ export default function EditCommissionsTab({ isAdmin }: EditCommissionsTabProps)
               <p className="text-sm text-yellow-700 mt-1">
                 Only administrators can modify commission order inclusions and exclusions.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move Order Modal */}
+      {movingOrderId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Calendar className="w-5 h-5 mr-2 text-blue-600" />
+                  Move Order to Different Month
+                </h3>
+                <button
+                  onClick={cancelMovingOrder}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Order Number
+                  </label>
+                  <p className="text-sm text-gray-900 font-semibold">
+                    {filteredOrders.find(o => o.id === movingOrderId)?.soNumber}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Current Month
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    {new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Move to Month
+                    </label>
+                    <select
+                      value={moveToMonth}
+                      onChange={(e) => setMoveToMonth(e.target.value)}
+                      className="input w-full"
+                    >
+                      <option value="">Select Month</option>
+                      <option value="01">January</option>
+                      <option value="02">February</option>
+                      <option value="03">March</option>
+                      <option value="04">April</option>
+                      <option value="05">May</option>
+                      <option value="06">June</option>
+                      <option value="07">July</option>
+                      <option value="08">August</option>
+                      <option value="09">September</option>
+                      <option value="10">October</option>
+                      <option value="11">November</option>
+                      <option value="12">December</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Year
+                    </label>
+                    <select
+                      value={moveToYear}
+                      onChange={(e) => setMoveToYear(e.target.value)}
+                      className="input w-full"
+                    >
+                      <option value="">Select Year</option>
+                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Reason (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={moveReason}
+                    onChange={(e) => setMoveReason(e.target.value)}
+                    placeholder="e.g., Awaiting payment, Terms customer"
+                    className="input w-full"
+                  />
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-xs text-yellow-800">
+                    <strong>Note:</strong> Moving this order will recalculate commissions for both the current month and the target month.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={cancelMovingOrder}
+                  className="btn-secondary"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={moveOrder}
+                  disabled={!moveToMonth || !moveToYear || saving}
+                  className="btn-primary"
+                >
+                  {saving ? 'Moving...' : 'Move Order'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
