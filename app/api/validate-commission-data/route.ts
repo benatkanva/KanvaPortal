@@ -140,6 +140,13 @@ export async function POST(req: NextRequest) {
         continue; // Skip admin orders completely
       }
       
+      // Skip orders that were manually corrected in previous uploads
+      // The DB data is correct, so no validation needed
+      if (order.manuallyLinked === true) {
+        matchedOrders++; // Count as matched since it was manually fixed
+        continue;
+      }
+      
       // Determine effective sales person
       // CRITICAL: ONLY use order.salesPerson (Column T from Conversite CSV)
       let effectiveSalesPerson = order.salesPerson;
