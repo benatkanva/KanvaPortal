@@ -417,16 +417,10 @@ export class JustCallClient {
       return [];
     }
 
-    console.log(`[JustCall SMS] Found user: ${user.name} (ID: ${user.id}, Type: ${typeof user.id})`);
+    console.log(`[JustCall SMS] Found user: ${user.name} (ID: ${user.id}, Email: ${user.email})`);
 
-    // Validate user.id is a valid number
-    const agentId = Number(user.id);
-    if (isNaN(agentId) || agentId <= 0) {
-      console.error(`[JustCall] Invalid agent_id for SMS: ${user.id} (converted to ${agentId})`);
-      return [];
-    }
-
-    // JustCall API uses pagination - fetch all pages
+    // Try using agent_email instead of agent_id for SMS API
+    // SMS API might not support agent_id filtering
     const allSMS: JustCallSMSRecord[] = [];
     let page = 0;
     const perPage = 100; // Max per page
@@ -434,7 +428,7 @@ export class JustCallClient {
 
     while (hasMore) {
       const messages = await this.getSMS({
-        agent_id: agentId,
+        agent_email: user.email,
         start_date: startDate,
         end_date: endDate,
         page: page,
