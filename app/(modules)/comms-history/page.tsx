@@ -21,9 +21,28 @@ interface TeamMemberMetrics {
   name: string;
   email: string;
   calls: number;
-  sms: number;
+  inbound: number;
+  outbound: number;
+  completed: number;
+  missed: number;
   talkTime: number;
+  avgDuration: number;
+  connectionRate: number;
   trend: 'up' | 'down' | 'stable';
+  previousPeriodCalls: number;
+  change: number;
+  changePercent: number;
+}
+
+interface TeamTotals {
+  totalCalls: number;
+  totalInbound: number;
+  totalOutbound: number;
+  totalCompleted: number;
+  totalMissed: number;
+  totalTalkTime: number;
+  avgConnectionRate: number;
+  memberCount: number;
 }
 
 export default function CommsHistoryPage() {
@@ -35,7 +54,10 @@ export default function CommsHistoryPage() {
   });
   const [myMetrics, setMyMetrics] = useState<CallMetrics | null>(null);
   const [teamMetrics, setTeamMetrics] = useState<TeamMemberMetrics[]>([]);
+  const [teamTotals, setTeamTotals] = useState<TeamTotals | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter'>('month');
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     if (user?.email) {
@@ -43,9 +65,22 @@ export default function CommsHistoryPage() {
     }
   }, [user, dateRange]);
 
+  // Auto-refresh every 2 minutes
+  useEffect(() => {
+    if (!autoRefresh || !user?.email) return;
+    
+    const interval = setInterval(() => {
+      loadMetrics();
+    }, 120000); // 2 minutes
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, user, dateRange]);
+
   const loadMetrics = async () => {
     setLoading(true);
     try {
+      const token = await user?.getIdToken();
+      
       // Fetch my metrics
       const response = await fetch(
         `/api/justcall/metrics?email=${encodeURIComponent(user?.email || '')}&start_date=${dateRange.start}&end_date=${dateRange.end}`
@@ -57,10 +92,24 @@ export default function CommsHistoryPage() {
       }
 
       // If admin, fetch team metrics
-      if (isAdmin) {
-        // TODO: Implement team metrics aggregation
-        // For now, just show placeholder
+      if (isAdmin && token) {
+        const teamResponse = await fetch(
+          `/api/justcall/team-metrics?start_date=${dateRange.start}&end_date=${dateRange.end}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (teamResponse.ok) {
+          const teamData = await teamResponse.json();
+          setTeamMetrics(teamData.teamMetrics || []);
+          setTeamTotals(teamData.teamTotals || null);
+        }
       }
+
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading metrics:', error);
     } finally {
@@ -333,14 +382,144 @@ export default function CommsHistoryPage() {
       )}
 
       {/* Team Performance (Admin Only) */}
-      {isAdmin && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-kanva-green" />
-            Team Performance
-          </h2>
-          <p className="text-sm text-gray-500">Team metrics coming soon...</p>
-        </div>
+      {isAdmin && teamTotals && (
+        <>
+          {/* Team Totals */}
+          <div className="bg-gradient-to-br from-kanva-green to-green-600 rounded-xl shadow-lg p-6 text-white">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Users className="w-7 h-7" />
+                  Team Performance
+                </h2>
+                <p className="text-green-100 text-sm mt-1">
+                  {teamTotals.memberCount} active team members
+                </p>
+              </div>
+              {lastUpdated && (
+                <div className="text-right">
+                  <p className="text-xs text-green-100">Last updated</p>
+                  <p className="text-sm font-medium">{format(lastUpdated, 'h:mm a')}</p>
+                  <button
+                    onClick={() => loadMetrics()}
+                    className="text-xs text-green-100 hover:text-white underline mt-1"
+                  >
+                    Refresh now
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                <p className="text-green-100 text-sm mb-1">Total Calls</p>
+                <p className="text-3xl font-bold">{teamTotals.totalCalls}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                <p className="text-green-100 text-sm mb-1">Completed</p>
+                <p className="text-3xl font-bold">{teamTotals.totalCompleted}</p>
+                <p className="text-xs text-green-100 mt-1">
+                  {teamTotals.totalCalls > 0 
+                    ? `${Math.round((teamTotals.totalCompleted / teamTotals.totalCalls) * 100)}%`
+                    : '0%'}
+                </p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                <p className="text-green-100 text-sm mb-1">Talk Time</p>
+                <p className="text-3xl font-bold">{formatDuration(teamTotals.totalTalkTime)}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                <p className="text-green-100 text-sm mb-1">Avg Connection</p>
+                <p className="text-3xl font-bold">{teamTotals.avgConnectionRate}%</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Team Leaderboard */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Leaderboard</h3>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Rank</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Team Member</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Calls</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Completed</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Connection</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Talk Time</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamMetrics.map((member, index) => (
+                    <tr 
+                      key={member.userId} 
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${
+                        member.userId === user?.uid ? 'bg-green-50' : ''
+                      }`}
+                    >
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          {index === 0 && <span className="text-2xl">🥇</span>}
+                          {index === 1 && <span className="text-2xl">🥈</span>}
+                          {index === 2 && <span className="text-2xl">🥉</span>}
+                          {index > 2 && <span className="text-gray-500 font-medium">#{index + 1}</span>}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div>
+                          <div className="font-semibold text-gray-900">
+                            {member.name}
+                            {member.userId === user?.uid && (
+                              <span className="ml-2 text-xs bg-kanva-green text-white px-2 py-0.5 rounded">You</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500">{member.email}</div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className="font-semibold text-gray-900">{member.calls}</div>
+                        {member.change !== 0 && (
+                          <div className={`text-xs ${member.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {member.change > 0 ? '+' : ''}{member.change} ({member.changePercent}%)
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className="font-semibold text-gray-900">{member.completed}</div>
+                        <div className="text-xs text-gray-500">
+                          {member.missed} missed
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className={`font-semibold ${
+                          member.connectionRate >= 70 ? 'text-green-600' :
+                          member.connectionRate >= 50 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {member.connectionRate}%
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className="font-semibold text-gray-900">{formatDuration(member.talkTime)}</div>
+                        <div className="text-xs text-gray-500">
+                          {formatDuration(member.avgDuration)} avg
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        {member.trend === 'up' && <TrendingUp className="w-5 h-5 text-green-600 ml-auto" />}
+                        {member.trend === 'down' && <TrendingUp className="w-5 h-5 text-red-600 ml-auto rotate-180" />}
+                        {member.trend === 'stable' && <span className="text-gray-400">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
