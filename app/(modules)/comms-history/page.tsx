@@ -59,19 +59,56 @@ export default function CommsHistoryPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+  // Update date range when period changes
+  useEffect(() => {
+    const now = new Date();
+    let start: Date;
+    let end: Date = now;
+
+    switch (selectedPeriod) {
+      case 'week':
+        start = new Date(now);
+        start.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+        break;
+      case 'quarter':
+        start = new Date(now);
+        start.setMonth(now.getMonth() - 3);
+        break;
+    }
+
+    setDateRange({
+      start: format(start, 'yyyy-MM-dd'),
+      end: format(end, 'yyyy-MM-dd'),
+    });
+  }, [selectedPeriod]);
+
   useEffect(() => {
     if (user?.email) {
       loadMetrics();
     }
   }, [user, dateRange]);
 
-  // Auto-refresh every 2 minutes
+  // Auto-refresh every hour between 8AM-8PM
   useEffect(() => {
     if (!autoRefresh || !user?.email) return;
     
-    const interval = setInterval(() => {
-      loadMetrics();
-    }, 120000); // 2 minutes
+    const checkAndRefresh = () => {
+      const hour = new Date().getHours();
+      // Only refresh between 8AM (8) and 8PM (20)
+      if (hour >= 8 && hour < 20) {
+        loadMetrics();
+      }
+    };
+
+    // Check immediately
+    checkAndRefresh();
+    
+    // Then check every hour
+    const interval = setInterval(checkAndRefresh, 3600000); // 1 hour
 
     return () => clearInterval(interval);
   }, [autoRefresh, user, dateRange]);
@@ -393,7 +430,7 @@ export default function CommsHistoryPage() {
                   Team Performance
                 </h2>
                 <p className="text-green-100 text-sm mt-1">
-                  {teamTotals.memberCount} active team members
+                  {teamTotals.memberCount} active team members • {format(new Date(dateRange.start), 'MMM d')} - {format(new Date(dateRange.end), 'MMM d, yyyy')}
                 </p>
               </div>
               {lastUpdated && (
