@@ -39,11 +39,12 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Get all active users
+    // Get all users (remove status filter as it might not exist)
     const usersSnapshot = await adminDb
       .collection('users')
-      .where('status', '==', 'active')
       .get();
+
+    console.log(`[Team Metrics] Found ${usersSnapshot.size} users in Firestore`);
 
     const teamMetrics = [];
 
@@ -52,7 +53,12 @@ export async function GET(request: NextRequest) {
       const user = userDoc.data();
       const email = user.email;
       
-      if (!email) continue;
+      if (!email) {
+        console.log(`[Team Metrics] Skipping user ${userDoc.id} - no email`);
+        continue;
+      }
+
+      console.log(`[Team Metrics] Processing user: ${email}`);
 
       try {
         // Fetch calls for this user
@@ -80,7 +86,7 @@ export async function GET(request: NextRequest) {
         if (metrics.totalCalls > prevMetrics.totalCalls * 1.1) trend = 'up';
         else if (metrics.totalCalls < prevMetrics.totalCalls * 0.9) trend = 'down';
 
-        teamMetrics.push({
+        const memberMetric = {
           userId: userDoc.id,
           name: user.name || email.split('@')[0],
           email: email,
@@ -100,12 +106,17 @@ export async function GET(request: NextRequest) {
           changePercent: prevMetrics.totalCalls > 0
             ? Math.round(((metrics.totalCalls - prevMetrics.totalCalls) / prevMetrics.totalCalls) * 100)
             : 0
-        });
+        };
+        
+        teamMetrics.push(memberMetric);
+        console.log(`[Team Metrics] Added ${email}: ${metrics.totalCalls} calls`);
       } catch (error) {
-        console.error(`Error fetching metrics for ${email}:`, error);
+        console.error(`[Team Metrics] Error fetching metrics for ${email}:`, error);
         // Continue with other users
       }
     }
+
+    console.log(`[Team Metrics] Total team members processed: ${teamMetrics.length}`);
 
     // Sort by total calls descending
     teamMetrics.sort((a, b) => b.calls - a.calls);
