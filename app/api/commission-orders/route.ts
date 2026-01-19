@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`📦 Found ${snapshot.size} commission records for ${commissionMonth}`);
 
-    // Map commission records to order format
-    const orders = snapshot.docs.map((doc) => {
+    // Map commission records to order format and fetch line items
+    const ordersPromises = snapshot.docs.map(async (doc) => {
       const data = doc.data();
       
       // Convert Firestore Timestamp to ISO string for API response
@@ -51,6 +51,31 @@ export async function GET(request: NextRequest) {
           postingDate = data.orderDate;
         } else if (data.orderDate instanceof Date) {
           postingDate = data.orderDate.toISOString();
+        }
+      }
+      
+      // Fetch line items for this order from fishbowl_soitems
+      let lineItems: any[] = [];
+      if (data.salesOrderId) {
+        try {
+          const lineItemsSnapshot = await adminDb
+            .collection('fishbowl_soitems')
+            .where('salesOrderId', '==', data.salesOrderId)
+            .get();
+          
+          lineItems = lineItemsSnapshot.docs.map(itemDoc => {
+            const item = itemDoc.data();
+            return {
+              productCode: item.productNum || item.partNumber || '',
+              productName: item.productName || item.description || '',
+              quantity: item.quantity || 0,
+              unitPrice: item.unitPrice || 0,
+              lineTotal: item.totalPrice || 0,
+              image: item.image || ''
+            };
+          });
+        } catch (error) {
+          console.error(`⚠️ Error fetching line items for order ${data.salesOrderId}:`, error);
         }
       }
       
@@ -68,9 +93,12 @@ export async function GET(request: NextRequest) {
         excludeFromCommission: data.excludeFromCommission || false,
         commissionNote: data.commissionNote || '',
         customerSegment: data.customerSegment || '',
-        customerStatus: data.customerStatus || ''
+        customerStatus: data.customerStatus || '',
+        lineItems
       };
     });
+
+    const orders = await Promise.all(ordersPromises);
 
     // Sort by posting date descending
     orders.sort((a, b) => {
