@@ -375,7 +375,14 @@ export class JustCallClient {
     try {
       const queryParams = new URLSearchParams();
       
-      if (params.agent_id) queryParams.append('agent_id', params.agent_id.toString());
+      // Ensure agent_id is a valid number
+      if (params.agent_id) {
+        const agentId = Number(params.agent_id);
+        if (!isNaN(agentId) && agentId > 0) {
+          queryParams.append('agent_id', agentId.toString());
+        }
+      }
+      
       if (params.agent_email) queryParams.append('agent_email', params.agent_email);
       if (params.start_date) queryParams.append('start_date', params.start_date);
       if (params.end_date) queryParams.append('end_date', params.end_date);
@@ -410,6 +417,15 @@ export class JustCallClient {
       return [];
     }
 
+    console.log(`[JustCall SMS] Found user: ${user.name} (ID: ${user.id}, Type: ${typeof user.id})`);
+
+    // Validate user.id is a valid number
+    const agentId = Number(user.id);
+    if (isNaN(agentId) || agentId <= 0) {
+      console.error(`[JustCall] Invalid agent_id for SMS: ${user.id} (converted to ${agentId})`);
+      return [];
+    }
+
     // JustCall API uses pagination - fetch all pages
     const allSMS: JustCallSMSRecord[] = [];
     let page = 0;
@@ -418,7 +434,7 @@ export class JustCallClient {
 
     while (hasMore) {
       const messages = await this.getSMS({
-        agent_id: user.id,
+        agent_id: agentId,
         start_date: startDate,
         end_date: endDate,
         page: page,
