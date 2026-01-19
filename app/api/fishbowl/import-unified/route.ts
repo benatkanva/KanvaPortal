@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { parse } from 'csv-parse/sync';
+import { createHeaderMap, normalizeRow } from '../normalize-headers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -108,9 +109,14 @@ export async function POST(req: NextRequest) {
     
     console.log(`📊 Parsed ${data.length} rows from CSV`);
     
+    // Normalize headers to handle varying CSV formats
+    const headers = data.length > 0 ? Object.keys(data[0] as Record<string, any>) : [];
+    const headerMap = createHeaderMap(headers);
+    const normalizedData = data.map(row => normalizeRow(row, headerMap));
+    
     // Debug: Show first row's column names and price values
-    if (data.length > 0) {
-      const firstRow = data[0] as Record<string, any>;
+    if (normalizedData.length > 0) {
+      const firstRow = normalizedData[0] as Record<string, any>;
       console.log('\n🔍 DEBUG: First row column names containing "price":');
       Object.keys(firstRow).forEach(key => {
         if (key.toLowerCase().includes('price')) {
@@ -150,8 +156,8 @@ export async function POST(req: NextRequest) {
     });
     console.log(`✅ Loaded ${fishbowlCustomersMap.size} existing Fishbowl customers (from Copper Sync)`);
     
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i] as Record<string, any>;
+    for (let i = 0; i < normalizedData.length; i++) {
+      const row = normalizedData[i] as Record<string, any>;
       stats.processed++;
       
       const soNum = String(row['Sales order Number'] ?? row['Sales Order Number'] ?? '').trim();
