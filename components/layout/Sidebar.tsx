@@ -11,7 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
-  Users
+  Users,
+  Phone
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -48,6 +49,12 @@ export default function Sidebar({ query = '' }: SidebarProps) {
       href: `/customers${query}`,
       icon: Users,
       active: pathname?.startsWith('/customers')
+    },
+    {
+      name: 'Communications',
+      href: `/comms-history${query}`,
+      icon: Phone,
+      active: pathname?.startsWith('/comms-history')
     },
     {
       name: 'Quotes',
