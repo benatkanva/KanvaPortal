@@ -1,7 +1,5 @@
+import { db } from '@/lib/firebase/config';
 import { 
-  db, 
-  serverTimestamp, 
-  Timestamp,
   collection,
   doc,
   setDoc,
@@ -13,8 +11,10 @@ import {
   orderBy,
   limit,
   onSnapshot,
-  Unsubscribe
-} from '@/lib/firebase/config';
+  Unsubscribe,
+  serverTimestamp,
+  Timestamp
+} from 'firebase/firestore';
 
 import { Goal, Metric, GoalPeriod, GoalType, User } from '@/types/goals';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter } from 'date-fns';

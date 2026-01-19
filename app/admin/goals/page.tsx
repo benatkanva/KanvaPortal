@@ -3,9 +3,9 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
-import { User, Goal, GoalType, GoalPeriod } from '@/types';
-import { auth, onAuthStateChange } from '@/lib/firebase/client';
-import { userService, goalService } from '@/lib/firebase/services';
+import { Goal, GoalType, GoalPeriod, User as GoalsUser } from '@/types/goals';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { userService, goalService } from '@/lib/firebase/services/goals';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -35,10 +35,10 @@ interface TeamMemberGoals {
 }
 
 export default function AdminGoalsPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user, userProfile, isAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState<TeamMemberGoals[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<GoalPeriod>('daily');
+  const [selectedPeriod, setSelectedPeriod] = useState<GoalPeriod>('weekly');
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [editingGoals, setEditingGoals] = useState<Record<GoalType, number>>({
     phone_call_quantity: 0,
@@ -53,37 +53,23 @@ export default function AdminGoalsPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  // Check authentication and authorization
+  // Load team data when authenticated
   useEffect(() => {
-    const unsub = onAuthStateChange(async (firebaseUser) => {
-      if (!firebaseUser) {
-        setCurrentUser(null);
-        setLoading(false);
-        return;
-      }
-
-      const userData = await userService.getUser(firebaseUser.uid);
-      if (userData && (userData.role === 'admin' || userData.role === 'manager')) {
-        setCurrentUser(userData);
-        loadTeamData();
-      } else {
-        setCurrentUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => unsub();
-  }, []);
+    if (!authLoading && user && isAdmin) {
+      loadTeamData();
+    } else if (!authLoading) {
+      setLoading(false);
+    }
+  }, [authLoading, user, isAdmin]);
 
   const loadTeamData = async () => {
     setLoading(true);
     try {
       // Get auth token for API call
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
+      if (!user) {
         throw new Error('Not authenticated');
       }
-      const token = await currentUser.getIdToken();
+      const token = await user.getIdToken();
       
       // Fetch all users
       const response = await fetch('/api/admin/users', { 
@@ -146,9 +132,8 @@ export default function AdminGoalsPage() {
     setSaving(true);
     try {
       // Get auth token
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
-      const token = await currentUser.getIdToken();
+      if (!user) throw new Error('Not authenticated');
+      const token = await user.getIdToken();
 
       // Save each goal
       const promises = goalTypes.map(async (type) => {
@@ -194,9 +179,8 @@ export default function AdminGoalsPage() {
     setSaving(true);
     try {
       // Get auth token
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not authenticated');
-      const token = await currentUser.getIdToken();
+      if (!user) throw new Error('Not authenticated');
+      const token = await user.getIdToken();
 
       const promises = teamMembers.map(member =>
         fetch('/api/admin/goals/bulk', {
@@ -251,7 +235,7 @@ export default function AdminGoalsPage() {
     );
   }
 
-  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'manager')) {
+  if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'manager')) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="bg-white shadow-sm rounded-xl p-8 max-w-md w-full text-center">
