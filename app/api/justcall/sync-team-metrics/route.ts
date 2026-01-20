@@ -96,12 +96,18 @@ export async function POST(request: NextRequest) {
       // Sync each period for this user
       for (const period of periods) {
         try {
+          // Add delay BEFORE making API call to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 2500)); // 2.5 second delay
+          
           // Fetch current period calls using agent_id directly
           const calls = await justCallClient.getCallsByAgentId(
             agentId,
             period.start.toISOString().split('T')[0],
             period.end.toISOString().split('T')[0]
           );
+
+          // Add delay before next API call
+          await new Promise(resolve => setTimeout(resolve, 2500));
 
           // Fetch previous period calls for trend
           const prevCalls = await justCallClient.getCallsByAgentId(
@@ -161,9 +167,6 @@ export async function POST(request: NextRequest) {
           });
 
           console.log(`[Sync Team] ${userEmail} - ${period.name}: ${metrics.totalCalls} calls`);
-          
-          // Add small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
 
         } catch (error) {
           console.error(`[Sync Team] Error syncing ${period.name} for ${userEmail}:`, error);
@@ -172,6 +175,12 @@ export async function POST(request: NextRequest) {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
           });
+          
+          // If rate limited, wait longer before continuing
+          if (error instanceof Error && error.message.includes('429')) {
+            console.log(`[Sync Team] Rate limited - waiting 5 seconds before continuing`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
         }
       }
 
