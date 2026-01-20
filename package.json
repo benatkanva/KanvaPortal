@@ -14,8 +14,9 @@
     "type-check": "tsc --noEmit",
     "deploy": "npm run build && firebase deploy",
     "init-db": "node scripts/init-firestore-web.js",
-    "discover-relationships": "ts-node scripts/discover-relationships.ts",
-    "analyze-data-access": "ts-node scripts/analyze-data-access.ts"
+    "discover-relationships": "ts-node --project tsconfig.scripts.json scripts/discover-relationships.ts",
+    "analyze-data-access": "ts-node --project tsconfig.scripts.json scripts/analyze-data-access.ts",
+    "inspect-schema": "ts-node --project tsconfig.scripts.json scripts/inspect-complete-schema.ts"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
@@ -47,7 +48,7 @@
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
-    "@types/node": "^20.10.5",
+    "@types/node": "^20.19.30",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
@@ -59,6 +60,7 @@
     "markdown-it": "^14.1.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }
 }

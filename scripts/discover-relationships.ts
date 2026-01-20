@@ -102,11 +102,20 @@ class RelationshipDiscoverer {
   private subcollections: SubcollectionMapping[] = [];
   private collections: Set<string> = new Set();
   private fields: Map<string, Set<string>> = new Map();
+  private filesScanned: number = 0;
+  private linesScanned: number = 0;
   
   scanFile(filePath: string): void {
     try {
+      this.filesScanned++;
       const content = fs.readFileSync(filePath, 'utf-8');
       const lines = content.split('\n');
+      this.linesScanned += lines.length;
+      
+      // Log every 50 files
+      if (this.filesScanned % 50 === 0) {
+        console.log(`   Scanned ${this.filesScanned} files, ${this.linesScanned} lines...`);
+      }
       
       lines.forEach((line, index) => {
         this.analyzeLine(line, filePath, index + 1, content);
@@ -356,6 +365,10 @@ class RelationshipDiscoverer {
   
   generateReport(): DiscoveryReport {
     const relationships = Array.from(this.relationships.values());
+    
+    console.log(`\n📊 Scan Statistics:`);
+    console.log(`   - Files scanned: ${this.filesScanned}`);
+    console.log(`   - Lines analyzed: ${this.linesScanned}`);
     
     return {
       relationships,

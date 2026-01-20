@@ -1,0 +1,127 @@
+{
+  "relationships": [
+    {
+      "sourceCollection": "users",
+      "sourceField": "email",
+      "targetCollection": "users",
+      "targetField": "email",
+      "type": "where_clause",
+      "confidence": "high",
+      "locations": [
+        {
+          "file": "C:\\Projects\\KanvaPortal\\app\\(modules)\\commissions\\page.tsx",
+          "line": 74,
+          "code": "const userDoc = await getDocs(query(collection(db, 'users'), where('email', '==', user.email)));"
+        }
+      ]
+    },
+    {
+      "sourceCollection": "fishbowl_sales_orders",
+      "sourceField": "accountType",
+      "targetCollection": "copper_companies",
+      "targetField": "accountType",
+      "type": "field_reference",
+      "confidence": "medium",
+      "locations": [
+        {
+          "file": "C:\\Projects\\KanvaPortal\\app\\api\\fix-order-account-types\\route.ts",
+          "line": 64,
+          "code": "if (orderData.accountType === customer.accountType &&"
+        }
+      ]
+    },
+    {
+      "sourceCollection": "fishbowl_sales_orders",
+      "sourceField": "accountTypeSource",
+      "targetCollection": "copper_companies",
+      "targetField": "accountTypeSource",
+      "type": "field_reference",
+      "confidence": "medium",
+      "locations": [
+        {
+          "file": "C:\\Projects\\KanvaPortal\\app\\api\\fix-order-account-types\\route.ts",
+          "line": 65,
+          "code": "orderData.accountTypeSource === customer.accountTypeSource) {"
+        }
+      ]
+    },
+    {
+      "sourceCollection": "fishbowl_sales_order_items",
+      "sourceField": "accountType",
+      "targetCollection": "copper_companies",
+      "targetField": "accountType",
+      "type": "field_reference",
+      "confidence": "medium",
+      "locations": [
+        {
+          "file": "C:\\Projects\\KanvaPortal\\app\\api\\fix-order-account-types\\route.ts",
+          "line": 120,
+          "code": "if (itemData.accountType === customer.accountType &&"
+        }
+      ]
+    },
+    {
+      "sourceCollection": "fishbowl_sales_order_items",
+      "sourceField": "accountTypeSource",
+      "targetCollection": "copper_companies",
+      "targetField": "accountTypeSource",
+      "type": "field_reference",
+      "confidence": "medium",
+      "locations": [
+        {
+          "file": "C:\\Projects\\KanvaPortal\\app\\api\\fix-order-account-types\\route.ts",
+          "line": 121,
+          "code": "itemData.accountTypeSource === customer.accountTypeSource) {"
+        }
+      ]
+    },
+    {
+      "sourceCollection": "users",
+      "sourceField": "email",
+      "targetCollection": "notifications",
+      "targetField": "userEmail",
+      "type": "where_clause",
+      "confidence": "high",
+      "locations": [
+        {
+          "file": "C:\\Projects\\KanvaPortal\\hooks\\useNotifications.ts",
+          "line": 44,
+          "code": "where('userEmail', '==', user.email),"
+        }
+      ]
+    }
+  ],
+  "subcollections": [
+    {
+      "parentCollection": "user_emails",
+      "subcollectionPath": "emails",
+      "locations": [
+        {
+          "file": "C:\\Projects\\KanvaPortal\\app\\api\\dashboard\\activities\\route.ts",
+          "line": 126,
+          "code": "const emailRef = adminDb.collection('user_emails').doc(userId).collection('emails');"
+        },
+        {
+          "file": "C:\\Projects\\KanvaPortal\\app\\api\\dashboard\\stats\\route.ts",
+          "line": 124,
+          "code": "const emailRef = adminDb.collection('user_emails').doc(userId).collection('emails');"
+        },
+        {
+          "file": "C:\\Projects\\KanvaPortal\\app\\api\\gmail\\callback\\route.ts",
+          "line": 101,
+          "code": "const emailsRef = adminDb.collection('user_emails').doc(userId).collection('emails');"
+        }
+      ]
+    }
+  ],
+  "collections": {},
+  "fields": {},
+  "summary": {
+    "totalRelationships": 6,
+    "highConfidence": 2,
+    "mediumConfidence": 4,
+    "lowConfidence": 0,
+    "subcollectionsFound": 1,
+    "collectionsFound": 33
+  }
+}
