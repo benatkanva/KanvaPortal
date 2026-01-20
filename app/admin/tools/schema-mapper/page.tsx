@@ -1,25 +1,26 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ReactFlow, {
   Node,
   Edge,
-  Controls,
-  Background,
+  Connection,
   useNodesState,
   useEdgesState,
-  addEdge,
-  Connection,
   MarkerType,
-  Panel,
-  ReactFlowProvider,
   NodeTypes,
+  ReactFlowProvider,
+  useReactFlow,
+  Background,
+  Controls,
+  Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Database, Save, Download, Upload, Plus, Trash2, GitBranch, Link2 } from 'lucide-react';
+import { GitBranch, Save, Upload, Download, Trash2, Maximize2, Link2, Plus, Database } from 'lucide-react';
 import { CollectionNode } from './components/CollectionNode';
 
 function SchemaMapperContent() {
+  const { fitView } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [allCollections, setAllCollections] = useState<any[]>([]);
@@ -461,9 +462,9 @@ function SchemaMapperContent() {
 
       <div className="flex-1 flex">
         {/* Collections Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
                 Collections ({allCollections.length})
               </h2>
@@ -475,7 +476,9 @@ function SchemaMapperContent() {
                 {loading ? 'Loading...' : 'Refresh'}
               </button>
             </div>
+          </div>
 
+          <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-2">
               {allCollections.map((collection) => {
                 const isOnCanvas = nodes.some((node) => node.id === collection.id);
@@ -545,12 +548,18 @@ function SchemaMapperContent() {
                     <span>Many:Many Relationship</span>
                   </div>
                 </div>
-                <div className="pt-2 border-t border-gray-200 mt-2">
-                  <p className="text-xs text-gray-600">
-                    <strong>Phase 3:</strong> Connect collections, then map specific fields in the relationship modal.
-                  </p>
-                </div>
               </div>
+            </Panel>
+
+            {/* Center View Button */}
+            <Panel position="bottom-right">
+              <button
+                onClick={() => fitView({ padding: 0.2, duration: 400 })}
+                className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                title="Center and fit all nodes"
+              >
+                <Maximize2 className="w-5 h-5 text-gray-700" />
+              </button>
             </Panel>
           </ReactFlow>
 
