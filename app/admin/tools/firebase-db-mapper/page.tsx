@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Database, Search, Download, AlertCircle, CheckCircle, Copy } from 'lucide-react';
 
 interface CollectionMetadata {
@@ -41,20 +41,29 @@ export default function FirebaseDBMapperPage() {
   const [error, setError] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<CollectionMetadata | null>(null);
   const [metadataOutput, setMetadataOutput] = useState<string>('');
+  const [allCollections, setAllCollections] = useState<any[]>([]);
+  const [loadingCollections, setLoadingCollections] = useState(false);
 
-  // Common Firestore collections
-  const commonCollections = [
-    'copper_companies',
-    'copper_people',
-    'fishbowl_customers',
-    'fishbowl_sales_orders',
-    'fishbowl_sales_order_items',
-    'customer_sales_summary',
-    'users',
-    'monthly_commissions',
-    'commission_details',
-    'justcall_calls',
-  ];
+  // Load all collections on mount
+  const loadAllCollections = async () => {
+    setLoadingCollections(true);
+    try {
+      const response = await fetch('/api/firestore-collections-list');
+      if (response.ok) {
+        const data = await response.json();
+        setAllCollections(data.collections || []);
+      }
+    } catch (err) {
+      console.error('Error loading collections:', err);
+    } finally {
+      setLoadingCollections(false);
+    }
+  };
+
+  // Load collections on mount
+  React.useEffect(() => {
+    loadAllCollections();
+  }, []);
 
   const handleAnalyze = async () => {
     if (!collectionName.trim()) {
@@ -143,21 +152,46 @@ export default function FirebaseDBMapperPage() {
             </div>
           </div>
 
-          {/* Quick Select Buttons */}
+          {/* All Collections List */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quick Select Common Collections
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {commonCollections.map((collection) => (
-                <button
-                  key={collection}
-                  onClick={() => setCollectionName(collection)}
-                  className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-                >
-                  {collection}
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                All Collections ({allCollections.length})
+              </label>
+              <button
+                onClick={loadAllCollections}
+                disabled={loadingCollections}
+                className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              >
+                <Database className="w-3 h-3" />
+                {loadingCollections ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+            <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2">
+              {loadingCollections ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {allCollections.map((collection) => (
+                    <button
+                      key={collection.id}
+                      onClick={() => setCollectionName(collection.id)}
+                      className={`px-3 py-2 text-xs text-left rounded-lg transition-colors ${
+                        collectionName === collection.id
+                          ? 'bg-blue-100 text-blue-700 font-medium'
+                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      <div className="font-mono">{collection.id}</div>
+                      <div className="text-gray-500 mt-0.5">
+                        {collection.countNote} docs
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
