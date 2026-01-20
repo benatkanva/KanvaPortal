@@ -12,34 +12,20 @@ import ReactFlow, {
   Connection,
   MarkerType,
   Panel,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Database, Save, Download, Upload, Plus, Trash2, GitBranch } from 'lucide-react';
+import { Database, Save, Download, Upload, Plus, Trash2, GitBranch, Link2 } from 'lucide-react';
 
-interface CollectionNode extends Node {
-  data: {
-    label: string;
-    collectionName: string;
-    documentCount: string;
-    fields?: string[];
-  };
-}
-
-interface RelationshipEdge extends Edge {
-  data?: {
-    type: '1:1' | '1:many' | 'many:many';
-    fromField?: string;
-    toField?: string;
-  };
-}
-
-export default function SchemaMapperPage() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<CollectionNode>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<RelationshipEdge>([]);
+function SchemaMapperContent() {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [allCollections, setAllCollections] = useState<any[]>([]);
-  const [selectedEdge, setSelectedEdge] = useState<RelationshipEdge | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<any>(null);
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [collectionFields, setCollectionFields] = useState<Record<string, any[]>>({});
+  const [loadingFields, setLoadingFields] = useState<Record<string, boolean>>({});
 
   // Load all collections on mount
   useEffect(() => {
@@ -61,9 +47,33 @@ export default function SchemaMapperPage() {
     }
   };
 
+  // Load fields for a collection
+  const loadCollectionFields = async (collectionName: string) => {
+    if (collectionFields[collectionName]) return; // Already loaded
+
+    setLoadingFields((prev) => ({ ...prev, [collectionName]: true }));
+    try {
+      const response = await fetch('/api/firestore-collection-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collectionName, sampleSize: 50 }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const fields = data.fields?.all || [];
+        setCollectionFields((prev) => ({ ...prev, [collectionName]: fields }));
+      }
+    } catch (err) {
+      console.error(`Error loading fields for ${collectionName}:`, err);
+    } finally {
+      setLoadingFields((prev) => ({ ...prev, [collectionName]: false }));
+    }
+  };
+
   // Add collection to canvas
-  const addCollectionToCanvas = (collection: any) => {
-    const newNode: CollectionNode = {
+  const addCollectionToCanvas = async (collection: any) => {
+    const newNode: Node = {
       id: collection.id,
       type: 'default',
       position: { 
@@ -85,14 +95,20 @@ export default function SchemaMapperPage() {
     };
 
     setNodes((nds) => [...nds, newNode]);
+    
+    // Load fields for this collection
+    await loadCollectionFields(collection.id);
   };
 
   // Handle connection between nodes
   const onConnect = useCallback(
     (params: Connection) => {
-      const newEdge: RelationshipEdge = {
-        ...params,
+      if (!params.source || !params.target) return;
+
+      const newEdge: Edge = {
         id: `${params.source}-${params.target}`,
+        source: params.source,
+        target: params.target,
         type: 'smoothstep',
         animated: true,
         markerEnd: {
@@ -101,7 +117,9 @@ export default function SchemaMapperPage() {
           height: 20,
         },
         data: {
-          type: '1:many', // Default relationship type
+          type: '1:many',
+          fromField: '',
+          toField: '',
         },
         style: {
           stroke: '#4F46E5',
@@ -116,18 +134,23 @@ export default function SchemaMapperPage() {
     [setEdges]
   );
 
-  // Update relationship type
-  const updateRelationshipType = (edgeId: string, type: '1:1' | '1:many' | 'many:many') => {
+  // Update relationship
+  const updateRelationship = (edgeId: string, updates: any) => {
     setEdges((eds) =>
       eds.map((edge) => {
         if (edge.id === edgeId) {
+          const newType = updates.type || edge.data?.type || '1:many';
+          const label = updates.fromField && updates.toField 
+            ? `${updates.fromField} → ${updates.toField}`
+            : newType;
+
           return {
             ...edge,
-            data: { ...edge.data, type },
-            label: type,
+            data: { ...edge.data, ...updates },
+            label,
             style: {
               ...edge.style,
-              stroke: type === '1:1' ? '#10B981' : type === '1:many' ? '#4F46E5' : '#F59E0B',
+              stroke: newType === '1:1' ? '#10B981' : newType === '1:many' ? '#4F46E5' : '#F59E0B',
             },
           };
         }
@@ -153,7 +176,6 @@ export default function SchemaMapperPage() {
       savedAt: new Date().toISOString(),
     };
 
-    // Save to localStorage for now (later we'll save to Firestore)
     localStorage.setItem('schema-mapper-config', JSON.stringify(schema));
     alert('Schema saved successfully!');
   };
@@ -202,9 +224,9 @@ export default function SchemaMapperPage() {
           <div className="flex items-center gap-3">
             <GitBranch className="w-8 h-8 text-indigo-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Visual Schema Mapper</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Visual Schema Mapper - Phase 3</h1>
               <p className="text-sm text-gray-500">
-                Drag collections onto canvas and connect them to define relationships
+                Drag collections, connect them, and map field-level relationships
               </p>
             </div>
           </div>
@@ -215,21 +237,21 @@ export default function SchemaMapperPage() {
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               <Save className="w-4 h-4" />
-              Save Schema
+              Save
             </button>
             <button
               onClick={loadSchema}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Upload className="w-4 h-4" />
-              Load Schema
+              Load
             </button>
             <button
               onClick={exportSchema}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
               <Download className="w-4 h-4" />
-              Export JSON
+              Export
             </button>
             <button
               onClick={clearCanvas}
@@ -329,7 +351,7 @@ export default function SchemaMapperPage() {
                 </div>
                 <div className="pt-2 border-t border-gray-200 mt-2">
                   <p className="text-xs text-gray-600">
-                    <strong>Tip:</strong> Drag collections from the sidebar, then drag from one node&apos;s edge to another to create relationships.
+                    <strong>Phase 3:</strong> Connect collections, then map specific fields in the relationship modal.
                   </p>
                 </div>
               </div>
@@ -351,50 +373,149 @@ export default function SchemaMapperPage() {
                   {edges.length} Relationships
                 </span>
               </div>
+              <div className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-900">
+                  {edges.filter(e => e.data?.fromField && e.data?.toField).length} Field Mappings
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Relationship Modal */}
+      {/* Relationship Modal - PHASE 3 */}
       {showRelationshipModal && selectedEdge && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Define Relationship
+              Define Relationship: {selectedEdge.source} → {selectedEdge.target}
             </h3>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Relationship Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Relationship Type
                 </label>
-                <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2">
                   {(['1:1', '1:many', 'many:many'] as const).map((type) => (
                     <button
                       key={type}
                       onClick={() => {
-                        updateRelationshipType(selectedEdge.id, type);
+                        updateRelationship(selectedEdge.id, { type });
                         setSelectedEdge({ ...selectedEdge, data: { ...selectedEdge.data, type } });
                       }}
-                      className={`w-full p-3 text-left rounded-lg border-2 transition-colors ${
+                      className={`p-3 text-center rounded-lg border-2 transition-colors ${
                         selectedEdge.data?.type === type
                           ? 'border-indigo-500 bg-indigo-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="font-medium text-gray-900">{type}</div>
-                      <div className="text-xs text-gray-500">
-                        {type === '1:1' && 'One-to-one relationship'}
-                        {type === '1:many' && 'One-to-many relationship'}
-                        {type === 'many:many' && 'Many-to-many relationship (requires junction table)'}
-                      </div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              {/* Field Mapping - PHASE 3 FEATURE */}
+              <div className="border-t border-gray-200 pt-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Link2 className="w-4 h-4" />
+                  Field-Level Mapping
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {/* From Field */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">
+                      From: {selectedEdge.source}
+                    </label>
+                    {loadingFields[selectedEdge.source] ? (
+                      <div className="text-xs text-gray-500">Loading fields...</div>
+                    ) : (
+                      <select
+                        value={selectedEdge.data?.fromField || ''}
+                        onChange={(e) => {
+                          const fromField = e.target.value;
+                          updateRelationship(selectedEdge.id, { fromField });
+                          setSelectedEdge({ ...selectedEdge, data: { ...selectedEdge.data, fromField } });
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      >
+                        <option value="">Select field...</option>
+                        {(collectionFields[selectedEdge.source] || []).map((field: any) => (
+                          <option key={field.fieldName} value={field.fieldName}>
+                            {field.fieldName} ({field.type})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {selectedEdge.data?.fromField && collectionFields[selectedEdge.source] && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                        <div className="font-medium text-gray-700">Sample:</div>
+                        <div className="text-gray-600 truncate">
+                          {JSON.stringify(
+                            collectionFields[selectedEdge.source]
+                              .find((f: any) => f.fieldName === selectedEdge.data.fromField)
+                              ?.sampleValues[0]
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* To Field */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">
+                      To: {selectedEdge.target}
+                    </label>
+                    {loadingFields[selectedEdge.target] ? (
+                      <div className="text-xs text-gray-500">Loading fields...</div>
+                    ) : (
+                      <select
+                        value={selectedEdge.data?.toField || ''}
+                        onChange={(e) => {
+                          const toField = e.target.value;
+                          updateRelationship(selectedEdge.id, { toField });
+                          setSelectedEdge({ ...selectedEdge, data: { ...selectedEdge.data, toField } });
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      >
+                        <option value="">Select field...</option>
+                        {(collectionFields[selectedEdge.target] || []).map((field: any) => (
+                          <option key={field.fieldName} value={field.fieldName}>
+                            {field.fieldName} ({field.type})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {selectedEdge.data?.toField && collectionFields[selectedEdge.target] && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                        <div className="font-medium text-gray-700">Sample:</div>
+                        <div className="text-gray-600 truncate">
+                          {JSON.stringify(
+                            collectionFields[selectedEdge.target]
+                              .find((f: any) => f.fieldName === selectedEdge.data.toField)
+                              ?.sampleValues[0]
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {selectedEdge.data?.fromField && selectedEdge.data?.toField && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="text-sm font-medium text-green-900">
+                      ✓ Mapping: {selectedEdge.source}.{selectedEdge.data.fromField} → {selectedEdge.target}.{selectedEdge.data.toField}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => setShowRelationshipModal(false)}
                   className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
@@ -416,5 +537,13 @@ export default function SchemaMapperPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SchemaMapperPage() {
+  return (
+    <ReactFlowProvider>
+      <SchemaMapperContent />
+    </ReactFlowProvider>
   );
 }
