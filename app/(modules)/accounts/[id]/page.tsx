@@ -38,7 +38,7 @@ export default function AccountDetailPage() {
   const { user, loading: authLoading } = useAuth();
   const accountId = params.id as string;
   
-  const account = useAccount(accountId);
+  const { data: account, isLoading: loadingAccount } = useAccount(accountId);
   const contacts = useAccountContacts(accountId);
   const { data: orders = [], isLoading: loadingOrders } = useAccountOrders(accountId);
   const { data: salesSummary, isLoading: loadingSales } = useAccountSales(accountId);

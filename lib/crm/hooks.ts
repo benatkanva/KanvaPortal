@@ -8,6 +8,7 @@ import {
   loadUnifiedDeals,
   loadAccountOrders,
   loadAccountSalesSummary,
+  loadAccountFromCopper,
   getTotalAccountsCount,
   getTotalContactsCount,
   type UnifiedAccount,
@@ -106,30 +107,30 @@ export function useAccountSales(accountId: string | null) {
   });
 }
 
-// Hook to get a single account by ID (uses cached data)
+// Hook to get a single account by ID from copper_companies
 export function useAccount(accountId: string | null) {
-  const { data } = useAccounts();
-  return data?.data?.find((a: UnifiedAccount) => a.id === accountId) || null;
+  return useQuery<UnifiedAccount | null>({
+    queryKey: ['crm', 'account', accountId],
+    queryFn: () => loadAccountFromCopper(accountId || ''),
+    enabled: !!accountId,
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 // Hook to get contacts for a specific account with primary contact marked
 export function useAccountContacts(accountId: string | null) {
-  const { data } = useContacts();
-  const account = useAccount(accountId);
+  const { data: contactsData } = useContacts();
+  const { data: account } = useAccount(accountId);
   
-  if (!accountId || !data?.data) return [];
+  if (!accountId || !contactsData?.data) return [];
   
-  const accountContacts = data.data.filter((c: UnifiedContact) => c.accountId === accountId);
+  const accountContacts = contactsData.data.filter((c: UnifiedContact) => c.accountId === accountId);
   
-  // Mark primary contact if account has primaryContactId
-  if (account?.primaryContactId) {
-    return accountContacts.map((c: UnifiedContact) => ({
-      ...c,
-      isPrimaryContact: c.copperId?.toString() === account.primaryContactId
-    }));
-  }
-  
-  return accountContacts;
+  // Mark primary contact
+  return accountContacts.map((c: UnifiedContact) => ({
+    ...c,
+    isPrimaryContact: c.id === account?.primaryContactId
+  }));
 }
 
 // Hook to prefetch data (call on app mount for instant loading)

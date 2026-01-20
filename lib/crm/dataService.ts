@@ -87,6 +87,16 @@ export interface UnifiedAccount {
   primaryContactEmail?: string;
   primaryContactPhone?: string;
   
+  // Copper custom fields
+  accountOrderId?: string; // cf_698467 - links to fishbowl_sales_orders.customerId
+  copperUrl?: string;
+  contactType?: string;
+  inactiveDays?: number;
+  interactionCount?: number;
+  lastContacted?: Date;
+  ownedBy?: string;
+  ownerId?: number;
+  
   // Status
   status: 'prospect' | 'active' | 'inactive' | 'churned';
   isActiveCustomer?: boolean;
@@ -738,26 +748,29 @@ export async function loadUnifiedDeals(): Promise<UnifiedDeal[]> {
 }
 
 /**
- * Load order history for an account
+ * Load order history for an account from copper_companies
+ * Links via cf_698467 (Account Order ID) = fishbowl_sales_orders.customerId
  */
 export async function loadAccountOrders(accountId: string): Promise<OrderSummary[]> {
   const orders: OrderSummary[] = [];
   
   try {
-    // First get the fishbowl customer to find the customer ID
-    const accountDoc = await getDoc(doc(db, 'fishbowl_customers', accountId));
+    // First get the copper_companies account to find the Account Order ID
+    const accountDoc = await getDoc(doc(db, 'copper_companies', accountId));
     if (!accountDoc.exists()) {
-      console.log(`Account ${accountId} not found in fishbowl_customers`);
+      console.log(`Account ${accountId} not found in copper_companies`);
       return orders;
     }
     
     const accountData = accountDoc.data();
-    const customerId = accountData.id || accountData.customerNum || accountData.accountId;
+    const customerId = accountData.cf_698467 || accountData['Account Order ID cf_698467'];
     
     if (!customerId) {
-      console.log(`No customer ID found for account ${accountId}`);
+      console.log(`No Account Order ID (cf_698467) found for account ${accountId}`);
       return orders;
     }
+    
+    console.log(`Loading orders for account ${accountId} with customerId: ${customerId}`);
     
     // Query orders by customerId
     const ordersQuery = query(
@@ -776,7 +789,7 @@ export async function loadAccountOrders(accountId: string): Promise<OrderSummary
         orderId: doc.id,
         orderNumber: data.orderNum || data.soNum || doc.id,
         orderDate: data.dateCreated?.toDate?.() || new Date(),
-        total: parseFloat(data.totalAmount) || parseFloat(data.total) || 0,
+        total: parseFloat(data.totalAmount) || parseFloat(data.total) || parseFloat(data.revenue) || 0,
         status: data.status || data.statusName || 'Unknown',
       });
     });
@@ -790,10 +803,97 @@ export async function loadAccountOrders(accountId: string): Promise<OrderSummary
 }
 
 /**
- * Load sales summary for an account
+ * Load a single account from copper_companies by Copper ID
+ */
+export async function loadAccountFromCopper(copperId: string): Promise<UnifiedAccount | null> {
+  try {
+    const docRef = doc(db, 'copper_companies', copperId);
+    const snapshot = await getDoc(docRef);
+    
+    if (!snapshot.exists()) {
+      console.log(`Account ${copperId} not found in copper_companies`);
+      return null;
+    }
+    
+    const data = snapshot.data();
+    
+    // Parse address from copper data
+    const address = data.address || {};
+    const street = address.street || data.street || data.Street || '';
+    const city = address.city || data.city || data.City || '';
+    const state = address.state || data.state || data.State || '';
+    const zip = address.postal_code || data.zip || data['Postal Code'] || '';
+    
+    // Build unified account from copper_companies data
+    const account: UnifiedAccount = {
+      id: snapshot.id,
+      source: 'copper',
+      copperId: data.id || data['Copper ID'] || Number(snapshot.id),
+      
+      // Core fields
+      name: data.name || data.Name || 'Unknown',
+      accountNumber: data.cf_713477 || data['Account ID cf_713477'],
+      website: data.websites?.[0] || '',
+      phone: data.phone_numbers?.[0]?.number || data.phone || data.Phone || '',
+      email: data.email || data.Email || '',
+      
+      // Address
+      shippingStreet: street,
+      shippingCity: city,
+      shippingState: state,
+      shippingZip: zip,
+      
+      // Classification
+      accountType: parseAccountType(data.cf_675914 || data['Account Type cf_675914']),
+      region: data.cf_680701 || data['Region cf_680701'],
+      
+      // Copper custom fields
+      accountOrderId: data.cf_698467 || data['Account Order ID cf_698467'],
+      copperUrl: data.copperUrl,
+      contactType: data['Contact Type'] || data.contact_type_id,
+      inactiveDays: data['Inactive Days'],
+      interactionCount: data['Interaction Count'] || data.interaction_count,
+      lastContacted: data['Last Contacted'] ? new Date(data['Last Contacted'] * 1000) : undefined,
+      ownedBy: data['Owned By'],
+      ownerId: data['Owner Id'] || data.assignee_id,
+      
+      // Primary Contact
+      primaryContactId: data['Primary Contact ID']?.toString() || data.primary_contact_id?.toString(),
+      primaryContactName: data['Primary Contact'],
+      
+      // Status
+      status: data.cf_712751 || data['Active Customer cf_712751'] ? 'active' : 'prospect',
+      isActiveCustomer: data.cf_712751 || data['Active Customer cf_712751'],
+      
+      // Metadata
+      createdAt: data['Created At'] ? new Date(data['Created At'] * 1000) : 
+                 data.date_created ? new Date(data.date_created * 1000) : undefined,
+      updatedAt: data['Updated At'] ? new Date(data['Updated At'] * 1000) : 
+                 data.date_modified ? new Date(data.date_modified * 1000) : undefined,
+      notes: data.details || data.notes || '',
+    };
+    
+    return account;
+  } catch (error) {
+    console.error('Error loading account from copper_companies:', error);
+    return null;
+  }
+}
+
+/**
+ * Load sales summary for an account from metrics subcollection
  */
 export async function loadAccountSalesSummary(accountId: string): Promise<any | null> {
   try {
+    // Try loading from copper_companies metrics subcollection first
+    const metricsRef = doc(db, 'copper_companies', accountId, 'metrics', 'sales_summary');
+    const metricsSnapshot = await getDoc(metricsRef);
+    
+    if (metricsSnapshot.exists()) {
+      return metricsSnapshot.data();
+    }
+    
+    // Fallback to old customer_sales_summary collection
     const docRef = doc(db, 'customer_sales_summary', accountId);
     const snapshot = await getDoc(docRef);
     
