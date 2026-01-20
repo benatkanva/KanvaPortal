@@ -66,6 +66,8 @@ export default function CopperImportPage() {
   const [customerSyncProgress, setCustomerSyncProgress] = useState<any>(null);
   const [protectedFields, setProtectedFields] = useState<any>(null);
   const [validationResult, setValidationResult] = useState<any>(null);
+  const [showMetadata, setShowMetadata] = useState<boolean>(false);
+  const [metadataOutput, setMetadataOutput] = useState<string>('');
 
   // Poll for sync progress (Step 1)
   const pollSyncProgress = async () => {
@@ -458,6 +460,75 @@ export default function CopperImportPage() {
                 <p className="text-sm text-blue-800 font-medium">{progress}</p>
               </div>
             )}
+
+            {/* Metadata Display Section */}
+            <div className="mt-6 border-t border-gray-200 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Copper Field Metadata</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    View all available Copper fields with their IDs, types, and options
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const response = await fetch('/api/copper-fields-metadata');
+                      if (response.ok) {
+                        const data = await response.json();
+                        setMetadataOutput(JSON.stringify(data, null, 2));
+                        setShowMetadata(true);
+                      }
+                    } catch (err) {
+                      console.error('Error fetching metadata:', err);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  {showMetadata ? 'Refresh Metadata' : 'View Metadata'}
+                </button>
+              </div>
+
+              {showMetadata && metadataOutput && (
+                <div className="space-y-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-gray-700">Complete Field Metadata (Copy this)</h4>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(metadataOutput);
+                          alert('Metadata copied to clipboard!');
+                        }}
+                        className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                      >
+                        Copy JSON
+                      </button>
+                    </div>
+                    <div className="bg-white border border-gray-300 rounded p-3 max-h-96 overflow-auto">
+                      <pre className="text-xs font-mono text-gray-800 whitespace-pre-wrap">
+                        {metadataOutput}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">📋 What&apos;s included:</h4>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                      <li>• <strong>Custom Field Definitions</strong> - All custom fields with IDs, names, and data types</li>
+                      <li>• <strong>Field Options</strong> - Dropdown and multi-select options with their IDs</li>
+                      <li>• <strong>Standard Fields</strong> - Name, address, phone, email, etc.</li>
+                      <li>• <strong>Sample Values</strong> - Real examples from your data</li>
+                      <li>• <strong>Field Frequency</strong> - How many companies have each field populated</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
