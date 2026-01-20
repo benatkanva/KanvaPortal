@@ -45,8 +45,8 @@ async function main() {
     process.exit(1);
   }
   
-  const collectionsData = await collectionsResponse.json();
-  const collections = collectionsData.collections;
+  const collectionsData: any = await collectionsResponse.json();
+  const collections = collectionsData.collections as string[];
   
   console.log(`   Found ${collections.length} collections\n`);
   
@@ -67,7 +67,7 @@ async function main() {
     process.exit(1);
   }
   
-  const schemasData = await schemasResponse.json();
+  const schemasData: any = await schemasResponse.json();
   
   console.log('\n✅ Schema inspection complete!\n');
   
