@@ -146,20 +146,35 @@ export default function CustomersTab({ isAdmin, reps, adminListOnly = false }: C
       });
       console.log(`Loaded ${summaryMap.size} customer sales summaries`);
 
-      // Get customers and their sales rep from most recent order
-      const snapshot = await getDocs(collection(db, 'fishbowl_customers'));
-      console.log(`Found ${snapshot.size} customers in Firestore`);
-
-      // Get sales rep for each customer from their orders
+      // Load sales orders to calculate lifetime value and get sales rep
       const ordersSnapshot = await getDocs(collection(db, 'fishbowl_sales_orders'));
+      const customerOrdersMap = new Map<string, { count: number; totalRevenue: number }>();
       const customerSalesRepMap = new Map();
-      ordersSnapshot.forEach(doc => {
+      
+      ordersSnapshot.forEach((doc) => {
         const order = doc.data();
-        if (order.customerId && order.salesPerson) {
-          customerSalesRepMap.set(order.customerId, order.salesPerson);
+        const customerId = order.customerId || order.customerName;
+        
+        if (customerId) {
+          // Calculate lifetime value
+          const existing = customerOrdersMap.get(customerId) || { count: 0, totalRevenue: 0 };
+          customerOrdersMap.set(customerId, {
+            count: existing.count + 1,
+            totalRevenue: existing.totalRevenue + (Number(order.revenue) || 0)
+          });
+          
+          // Get sales rep
+          if (order.salesPerson) {
+            customerSalesRepMap.set(customerId, order.salesPerson);
+          }
         }
       });
+      console.log(`Calculated lifetime value for ${customerOrdersMap.size} customers from orders`);
       console.log(`Mapped ${customerSalesRepMap.size} customers to sales reps from orders`);
+
+      // Get customers
+      const snapshot = await getDocs(collection(db, 'fishbowl_customers'));
+      console.log(`Found ${snapshot.size} customers in Firestore`);
 
       const customersData: any[] = [];
 
@@ -167,12 +182,15 @@ export default function CustomersTab({ isAdmin, reps, adminListOnly = false }: C
         const data = doc.data();
         const customerId = data.id || data.customerNum || doc.id;
 
-        // Get sales summary metrics
-        const summary = summaryMap.get(customerId) || {
-          orderCount: 0,
-          totalSales: 0,
-          region: '',
-          regionColor: '#808080'
+        // Get sales summary metrics - use fallback from orders if summary doesn't exist
+        const summaryData = summaryMap.get(customerId);
+        const ordersData = customerOrdersMap.get(customerId);
+        
+        const summary = {
+          orderCount: summaryData?.orderCount || ordersData?.count || 0,
+          totalSales: summaryData?.totalSales || ordersData?.totalRevenue || 0,
+          region: summaryData?.region || '',
+          regionColor: summaryData?.regionColor || '#808080'
         };
 
         // FIXED: Get CURRENT account owner (not originator)
