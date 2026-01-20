@@ -281,17 +281,41 @@ export class JustCallClient {
 
   /**
    * Get calls for a specific user by agent_id (avoids extra API call)
+   * Fetches ALL pages to get complete data
    */
   async getCallsByAgentId(
     agentId: number,
     startDate?: string,
     endDate?: string
   ): Promise<JustCallCallRecord[]> {
-    return this.getCalls({
-      agent_id: agentId,
-      start_date: startDate,
-      end_date: endDate,
-    });
+    const allCalls: JustCallCallRecord[] = [];
+    let page = 0;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const calls = await this.getCalls({
+        agent_id: agentId,
+        start_date: startDate,
+        end_date: endDate,
+        page: page,
+        limit: 100, // Max per page
+      });
+      
+      if (calls.length === 0) {
+        hasMore = false;
+      } else {
+        allCalls.push(...calls);
+        // If we got less than 100, we're on the last page
+        if (calls.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+    }
+    
+    console.log(`[JustCall] Fetched ${allCalls.length} total calls for agent ${agentId} across ${page + 1} pages`);
+    return allCalls;
   }
 
   /**

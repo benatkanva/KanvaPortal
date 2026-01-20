@@ -58,6 +58,7 @@ export default function CommsHistoryPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter'>('month');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   // Update date range when period changes
   useEffect(() => {
@@ -113,44 +114,13 @@ export default function CommsHistoryPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, user, dateRange]);
 
+  // Load metrics from cache only - fast and instant
   const loadMetrics = async () => {
     setLoading(true);
     try {
       const token = await user?.getIdToken();
       
-      // If admin, sync all team members' metrics
-      if (isAdmin) {
-        console.log('[Comms History] Admin user - syncing all team metrics');
-        const teamSyncResponse = await fetch('/api/justcall/sync-team-metrics', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!teamSyncResponse.ok) {
-          console.error('Failed to sync team metrics');
-        } else {
-          const syncData = await teamSyncResponse.json();
-          console.log(`[Comms History] Synced ${syncData.syncedUsers} users`);
-        }
-      } else {
-        // Regular user - just sync their own metrics
-        const syncResponse = await fetch('/api/justcall/sync-metrics', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!syncResponse.ok) {
-          console.error('Failed to sync metrics');
-        }
-      }
-
-      // Then fetch my metrics from cache
+      // Fetch my metrics from cache
       const myResponse = await fetch(
         `/api/justcall/metrics?email=${user?.email}&start_date=${dateRange.start}&end_date=${dateRange.end}`,
         {
@@ -188,6 +158,38 @@ export default function CommsHistoryPage() {
       console.error('Error loading metrics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Manual sync function - only for admins, runs in background
+  const syncMetrics = async () => {
+    if (!isAdmin || syncing) return;
+    
+    setSyncing(true);
+    try {
+      const token = await user?.getIdToken();
+      console.log('[Comms History] Starting manual sync...');
+      
+      const teamSyncResponse = await fetch('/api/justcall/sync-team-metrics', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (teamSyncResponse.ok) {
+        const syncData = await teamSyncResponse.json();
+        console.log(`[Comms History] Synced ${syncData.syncedUsers} users`);
+        // Reload metrics from cache after sync
+        await loadMetrics();
+      } else {
+        console.error('Failed to sync team metrics');
+      }
+    } catch (error) {
+      console.error('Error syncing metrics:', error);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -253,8 +255,34 @@ export default function CommsHistoryPage() {
             <p className="text-sm text-gray-500 mt-1">Track your calls, texts, and team performance</p>
           </div>
           
-          {/* Period Selector */}
+          {/* Period Selector and Sync Button */}
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <button
+                onClick={syncMetrics}
+                disabled={syncing}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  syncing
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-kanva-green text-white hover:bg-kanva-green/90'
+                }`}
+              >
+                <svg 
+                  className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                  />
+                </svg>
+                {syncing ? 'Syncing...' : 'Sync Data'}
+              </button>
+            )}
             <div className="flex bg-gray-100 rounded-lg p-1">
               {(['week', 'month', 'quarter'] as const).map((period) => (
                 <button
