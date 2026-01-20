@@ -26,8 +26,9 @@ setGlobalOptions({maxInstances: 10});
 const {syncShipStationOrders} = require("./shipstationSync");
 exports.syncShipStationOrders = syncShipStationOrders;
 
-// Scheduled customer metrics refresh (runs nightly at 2 AM PST)
-const {refreshCustomerMetricsNightly} = require("./src/scheduled/refreshCustomerMetrics");
+// Scheduled customer metrics refresh (nightly at 2 AM PST)
+const {refreshCustomerMetricsNightly} =
+  require("./src/scheduled/refreshCustomerMetrics");
 exports.refreshCustomerMetricsNightly = refreshCustomerMetricsNightly;
 
 // Create and deploy your first functions
