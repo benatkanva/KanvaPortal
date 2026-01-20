@@ -320,9 +320,10 @@ export async function loadUnifiedAccounts(
       
       console.log(`Found ${accounts.length} accounts using indexed queries`);
     } else {
-      // Build query for copper_companies
+      // Build query for copper_companies - ACTIVE CUSTOMERS ONLY
       let copperQuery = query(
         collection(db, 'copper_companies'),
+        where('cf_712751', '==', true),
         orderBy('name'),
         limit(pageSize)
       );
@@ -331,6 +332,7 @@ export async function loadUnifiedAccounts(
       if (filters?.salesPerson) {
         copperQuery = query(
           collection(db, 'copper_companies'),
+          where('cf_712751', '==', true),
           where('Owned By', '==', filters.salesPerson),
           orderBy('name'),
           limit(pageSize)
@@ -836,27 +838,65 @@ export async function loadAccountFromCopper(copperId: string): Promise<UnifiedAc
 }
 
 /**
- * Load sales summary for an account from metrics subcollection
+ * Load sales summary for an account
+ * Calculate on-demand from fishbowl_sales_orders
  */
 export async function loadAccountSalesSummary(accountId: string): Promise<any | null> {
   try {
-    // Try loading from copper_companies metrics subcollection first
-    const metricsRef = doc(db, 'copper_companies', accountId, 'metrics', 'sales_summary');
-    const metricsSnapshot = await getDoc(metricsRef);
-    
-    if (metricsSnapshot.exists()) {
-      return metricsSnapshot.data();
+    // Get account to find Account Order ID
+    const accountDoc = await getDoc(doc(db, 'copper_companies', accountId));
+    if (!accountDoc.exists()) {
+      return null;
     }
     
-    // Fallback to old customer_sales_summary collection
-    const docRef = doc(db, 'customer_sales_summary', accountId);
-    const snapshot = await getDoc(docRef);
+    const accountData = accountDoc.data();
+    const customerId = accountData.cf_698467 || accountData['Account Order ID cf_698467'];
     
-    if (snapshot.exists()) {
-      return snapshot.data();
+    if (!customerId) {
+      console.log(`No Account Order ID for ${accountId}`);
+      return null;
     }
     
-    return null;
+    // Query orders
+    const ordersQuery = query(
+      collection(db, 'fishbowl_sales_orders'),
+      where('customerId', '==', customerId),
+      orderBy('dateCreated', 'desc')
+    );
+    
+    const ordersSnapshot = await getDocs(ordersQuery);
+    
+    let totalRevenue = 0;
+    let totalOrders = ordersSnapshot.size;
+    let lastOrderDate: Date | undefined;
+    let firstOrderDate: Date | undefined;
+    
+    ordersSnapshot.forEach((doc) => {
+      const order = doc.data();
+      const revenue = parseFloat(order.totalAmount) || parseFloat(order.total) || parseFloat(order.revenue) || 0;
+      totalRevenue += revenue;
+      
+      const orderDate = order.dateCreated?.toDate?.();
+      if (orderDate) {
+        if (!lastOrderDate || orderDate > lastOrderDate) {
+          lastOrderDate = orderDate;
+        }
+        if (!firstOrderDate || orderDate < firstOrderDate) {
+          firstOrderDate = orderDate;
+        }
+      }
+    });
+    
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    
+    return {
+      accountId,
+      totalRevenue,
+      totalOrders,
+      averageOrderValue,
+      lastOrderDate,
+      firstOrderDate,
+    };
   } catch (error) {
     console.error('Error loading sales summary:', error);
     return null;

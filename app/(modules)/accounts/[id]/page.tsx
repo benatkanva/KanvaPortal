@@ -330,7 +330,12 @@ export default function AccountDetailPage() {
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#93D500]"></div>
                   </div>
                 ) : orders.length === 0 ? (
-                  <p className="px-4 py-2 text-xs text-gray-500">No orders</p>
+                  <div className="px-4 py-2">
+                    <p className="text-xs text-gray-500">No orders</p>
+                    {!account?.accountOrderId && (
+                      <p className="text-xs text-gray-400 mt-1">Account Order ID (cf_698467) not set</p>
+                    )}
+                  </div>
                 ) : (
                   orders.slice(0, 5).map((order) => (
                     <div key={order.orderId} className="px-4 py-2 hover:bg-gray-50 cursor-pointer">
@@ -675,36 +680,49 @@ export default function AccountDetailPage() {
             {/* Sales Metrics */}
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Sales Metrics</h3>
-              <div className="space-y-3">
-                <div>
-                  <span className="text-xs text-gray-500">Total Revenue</span>
-                  <p className="text-lg font-bold text-gray-900">
-                    ${(account.totalSpent || 0).toLocaleString()}
-                  </p>
+              {loadingSales ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#93D500]"></div>
                 </div>
-                <div>
-                  <span className="text-xs text-gray-500">Total Orders</span>
-                  <p className="text-lg font-bold text-gray-900">
-                    {account.totalOrders || 0}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-xs text-gray-500">Avg Order Value</span>
-                  <p className="text-lg font-bold text-gray-900">
-                    ${account.totalOrders && account.totalSpent
-                      ? (account.totalSpent / account.totalOrders).toLocaleString(undefined, { maximumFractionDigits: 0 })
-                      : '0'}
-                  </p>
-                </div>
-                {account.lastOrderDate && (
+              ) : salesSummary ? (
+                <div className="space-y-3">
                   <div>
-                    <span className="text-xs text-gray-500">Last Order</span>
-                    <p className="text-sm font-medium text-gray-900">
-                      {new Date(account.lastOrderDate).toLocaleDateString()}
+                    <span className="text-xs text-gray-500">Total Revenue</span>
+                    <p className="text-lg font-bold text-gray-900">
+                      ${(salesSummary.totalRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
-                )}
-              </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Total Orders</span>
+                    <p className="text-lg font-bold text-gray-900">
+                      {salesSummary.totalOrders || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Avg Order Value</span>
+                    <p className="text-lg font-bold text-gray-900">
+                      ${(salesSummary.averageOrderValue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                  {salesSummary.lastOrderDate && (
+                    <div>
+                      <span className="text-xs text-gray-500">Last Order</span>
+                      <p className="text-sm font-medium text-gray-900">
+                        {new Date(salesSummary.lastOrderDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : !account?.accountOrderId ? (
+                <div className="text-center py-4">
+                  <p className="text-xs text-gray-500">No Account Order ID</p>
+                  <p className="text-xs text-gray-400 mt-1">Link account to Fishbowl to see metrics</p>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs text-gray-500">No sales data</p>
+                </div>
+              )}
             </div>
             
             {/* Account Fields */}
