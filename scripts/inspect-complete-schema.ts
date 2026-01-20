@@ -150,7 +150,7 @@ async function main() {
     });
   }
   
-  // Save reports
+  // Save reports to docs (for reference)
   const reportPath = path.join(projectRoot, 'docs', 'complete-schema.md');
   fs.writeFileSync(reportPath, md);
   console.log(`📄 Report saved to: ${reportPath}\n`);
@@ -175,9 +175,10 @@ async function main() {
     relationships: completeSchema.relationships,
   };
   
-  const configPath = path.join(projectRoot, 'docs', 'schema-mapper-config.json');
-  fs.writeFileSync(configPath, JSON.stringify(mapperConfig, null, 2));
-  console.log(`📄 Schema Mapper config saved to: ${configPath}\n`);
+  // Save to PUBLIC folder so it's web-accessible
+  const publicPath = path.join(projectRoot, 'public', 'schema-mapper-config.json');
+  fs.writeFileSync(publicPath, JSON.stringify(mapperConfig, null, 2));
+  console.log(`📄 Schema Mapper config saved to: ${publicPath} (web-accessible)\n`);
   
   console.log('✅ Complete schema inspection finished!\n');
   console.log('📊 Statistics:');

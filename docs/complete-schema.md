@@ -1,6 +1,6 @@
 # Complete Firestore Schema Report
 
-**Generated:** 2026-01-20T21:48:54.397Z
+**Generated:** 2026-01-20T22:06:58.747Z
 
 **This shows REAL Firestore document fields from your database**
 
