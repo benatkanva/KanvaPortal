@@ -118,17 +118,36 @@ export default function CommsHistoryPage() {
     try {
       const token = await user?.getIdToken();
       
-      // First, sync metrics to Firestore cache
-      const syncResponse = await fetch('/api/justcall/sync-metrics', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // If admin, sync all team members' metrics
+      if (isAdmin) {
+        console.log('[Comms History] Admin user - syncing all team metrics');
+        const teamSyncResponse = await fetch('/api/justcall/sync-team-metrics', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-      if (!syncResponse.ok) {
-        console.error('Failed to sync metrics');
+        if (!teamSyncResponse.ok) {
+          console.error('Failed to sync team metrics');
+        } else {
+          const syncData = await teamSyncResponse.json();
+          console.log(`[Comms History] Synced ${syncData.syncedUsers} users`);
+        }
+      } else {
+        // Regular user - just sync their own metrics
+        const syncResponse = await fetch('/api/justcall/sync-metrics', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!syncResponse.ok) {
+          console.error('Failed to sync metrics');
+        }
       }
 
       // Then fetch my metrics from cache
@@ -146,7 +165,7 @@ export default function CommsHistoryPage() {
         setMyMetrics(myData.metrics);
       }
 
-      // Fetch team metrics if admin (also from cache)
+      // Fetch team metrics if admin (from cache)
       if (isAdmin) {
         const teamResponse = await fetch(
           `/api/justcall/team-metrics?start_date=${dateRange.start}&end_date=${dateRange.end}`,
