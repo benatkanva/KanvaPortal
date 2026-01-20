@@ -1674,7 +1674,14 @@ export default function CustomersTab({ isAdmin, reps, adminListOnly = false }: C
                           </td>
                         )}
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{customer.customerNum}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{customer.customerName}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <a 
+                            href={`/customers/${customer.id}`}
+                            className="text-kanva-green hover:underline font-medium"
+                          >
+                            {customer.customerName}
+                          </a>
+                        </td>
                         <td className="px-4 py-3">
                           {savingCustomer === customer.id ? (
                             <div className="flex items-center space-x-2">

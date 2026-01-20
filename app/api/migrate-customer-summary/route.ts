@@ -132,6 +132,10 @@ export async function POST(request: Request) {
         let lastOrderDate: Date | null = null;
         let lastOrderAmount = 0;
 
+        // Track monthly sales for velocity calculation
+        const monthlySales = new Map<string, number>();
+        const orderDates: Date[] = [];
+        
         orders.forEach(order => {
           const revenue = order.revenue;
           totalSales += revenue;
@@ -148,6 +152,12 @@ export async function POST(request: Request) {
           }
 
           if (orderDate) {
+            orderDates.push(orderDate);
+            
+            // Track monthly sales for trends
+            const monthKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+            monthlySales.set(monthKey, (monthlySales.get(monthKey) || 0) + revenue);
+            
             // YTD
             if (orderDate >= ytdStart) {
               totalSalesYTD += revenue;
@@ -177,8 +187,40 @@ export async function POST(request: Request) {
             }
           }
         });
+        
+        // Calculate velocity (orders per month over last 12 months)
+        const velocity = orders_12m > 0 ? orders_12m / 12 : 0;
+        
+        // Calculate ordering trend (comparing last 90d vs previous 90d)
+        const days180Ago = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        let sales_90to180d = 0;
+        orderDates.forEach(date => {
+          if (date >= days180Ago && date < days90Ago) {
+            const order = orders.find(o => {
+              if (o.postingDate && o.postingDate.toDate) {
+                return o.postingDate.toDate().getTime() === date.getTime();
+              }
+              return false;
+            });
+            if (order) sales_90to180d += order.revenue;
+          }
+        });
+        
+        const trend = sales_90to180d > 0 
+          ? ((sales_90d - sales_90to180d) / sales_90to180d) * 100 
+          : 0;
+        
+        // Calculate days since last order
+        const daysSinceLastOrder = lastOrderDate 
+          ? Math.floor((now.getTime() - (lastOrderDate as Date).getTime()) / (1000 * 60 * 60 * 24))
+          : null;
 
         const avgOrderValue = orders.length > 0 ? totalSales / orders.length : 0;
+        
+        // Convert monthly sales to array for storage
+        const monthlySalesArray = Array.from(monthlySales.entries())
+          .map(([month, sales]) => ({ month, sales }))
+          .sort((a, b) => a.month.localeCompare(b.month));
 
         // Get sales rep info
         const salesPerson = customer.salesPerson || '';
@@ -211,6 +253,13 @@ export async function POST(request: Request) {
           lastOrderDate: lastOrderDate ? (lastOrderDate as Date).toISOString().split('T')[0] : null,
           lastOrderAmount: lastOrderAmount,
           avgOrderValue: avgOrderValue,
+          
+          // Advanced metrics for sales insights
+          velocity: velocity, // Orders per month over last 12 months
+          trend: trend, // % change in sales (last 90d vs previous 90d)
+          daysSinceLastOrder: daysSinceLastOrder,
+          monthlySales: monthlySalesArray, // Monthly sales breakdown for charting
+          
           salesPerson: salesPerson,
           salesPersonName: repInfo.name,
           salesPersonId: repInfo.id, // User document ID
@@ -225,6 +274,10 @@ export async function POST(request: Request) {
           shippingZip: customer.shippingZip || '',
           lat: customer.lat || null,
           lng: customer.lng || null,
+          
+          // Copper CRM reference for unified profile
+          copperId: customer.copperId || null,
+          
           lastUpdatedAt: Timestamp.now()
         };
 
