@@ -14,6 +14,7 @@ import ReactFlow, {
   Background,
   Controls,
   Panel,
+  addEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { GitBranch, Save, Upload, Download, Trash2, Maximize2, Link2, Plus, Database } from 'lucide-react';
@@ -29,6 +30,7 @@ function SchemaMapperContent() {
   const [loading, setLoading] = useState(false);
   const [collectionFields, setCollectionFields] = useState<Record<string, any[]>>({});
   const [loadingFields, setLoadingFields] = useState<Record<string, boolean>>({});
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const loadCompleteSchema = useCallback(async () => {
     setLoading(true);
@@ -274,6 +276,10 @@ function SchemaMapperContent() {
         connectedFields: connectedFields[collection.id] || [],
         onFieldDrop: handleFieldDrop,
       },
+      style: {
+        width: 320,
+        height: 400,
+      },
     };
 
     // Fields are already loaded from schema config
@@ -460,26 +466,38 @@ function SchemaMapperContent() {
         </div>
       </div>
 
-      <div className="flex-1 flex">
-        {/* Collections Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Collections Sidebar - Collapsible */}
+        <div className={`${sidebarCollapsed ? 'w-12' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300`}>
+          <div className="p-3 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Collections ({allCollections.length})
-              </h2>
+              {!sidebarCollapsed && (
+                <>
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Collections ({allCollections.length})
+                  </h2>
+                  <button
+                    onClick={loadCompleteSchema}
+                    disabled={loading}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    {loading ? '...' : 'Refresh'}
+                  </button>
+                </>
+              )}
               <button
-                onClick={loadCompleteSchema}
-                disabled={loading}
-                className="text-sm text-blue-600 hover:text-blue-700"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-1 hover:bg-gray-100 rounded text-sm"
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                {loading ? 'Loading...' : 'Refresh'}
+                {sidebarCollapsed ? '→' : '←'}
               </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-2">
+          {!sidebarCollapsed && (
+            <div className="flex-1 overflow-y-auto p-3">
+              <div className="space-y-1.5">
               {allCollections.map((collection) => {
                 const isOnCanvas = nodes.some((node) => node.id === collection.id);
                 return (
@@ -512,8 +530,9 @@ function SchemaMapperContent() {
                   </div>
                 );
               })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* React Flow Canvas */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
 import { Database, Key, Link2, Calendar, Hash, Type, CheckSquare } from 'lucide-react';
 
 interface CollectionNodeData {
@@ -83,10 +83,18 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
       className={`bg-white rounded-lg shadow-lg border-2 transition-all ${
         selected ? 'border-indigo-500 shadow-xl' : 'border-gray-300'
       }`}
-      style={{ minWidth: 280, maxWidth: 400 }}
+      style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
     >
+      {/* Resizer - allows user to resize the node */}
+      <NodeResizer
+        color="#4F46E5"
+        isVisible={selected}
+        minWidth={280}
+        minHeight={200}
+      />
+      
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-3 rounded-t-lg">
+      <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-3 rounded-t-lg flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5" />
@@ -104,9 +112,9 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
         </div>
       </div>
 
-      {/* Fields List */}
+      {/* Fields List - Scrollable and fills remaining space */}
       {isExpanded && data.fields && (
-        <div className="max-h-96 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {/* Lookup Fields Section */}
           {lookupFields.length > 0 && (
             <div className="border-b border-gray-200">
@@ -158,7 +166,7 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
               <div className="bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
                 Fields ({regularFields.length})
               </div>
-              {regularFields.slice(0, 20).map((field, idx) => {
+              {regularFields.map((field, idx) => {
                 const isConnected = isFieldConnected(field.fieldName);
                 const isDragOver = dragOverField === field.fieldName;
                 return (
@@ -188,11 +196,6 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
                   </div>
                 );
               })}
-              {regularFields.length > 20 && (
-                <div className="px-3 py-2 text-xs text-gray-500 text-center">
-                  + {regularFields.length - 20} more fields
-                </div>
-              )}
             </div>
           )}
         </div>
