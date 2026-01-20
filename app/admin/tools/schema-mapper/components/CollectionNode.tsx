@@ -11,17 +11,16 @@ interface CollectionNodeData {
     type: string;
     isLookup?: boolean;
     lookupTarget?: string;
-    sampleValue?: any;
+    sampleValues?: any[];
   }>;
   expanded?: boolean;
   connectedFields?: string[]; // Fields that are part of relationships
-  onFieldDragStart?: (collectionId: string, fieldName: string) => void;
-  onFieldDrop?: (collectionId: string, fieldName: string) => void;
+  onFieldClick?: (collectionId: string, fieldName: string, collectionName: string) => void;
+  selectedFields?: Array<{collectionId: string, fieldName: string, collectionName: string}>;
 }
 
 export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeData>) {
   const [isExpanded, setIsExpanded] = React.useState(data.expanded || false);
-  const [dragOverField, setDragOverField] = React.useState<string | null>(null);
   
   const getFieldIcon = (type: string) => {
     if (type.includes('number')) return <Hash className="w-3 h-3" />;
@@ -30,45 +29,14 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
     return <Type className="w-3 h-3" />;
   };
 
-  const handleFieldDragStart = (e: React.DragEvent, fieldName: string) => {
-    e.stopPropagation();
-    const dragData = {
-      collectionId: id,
-      fieldName: fieldName,
-    };
-    e.dataTransfer.setData('application/json', JSON.stringify(dragData));
-    e.dataTransfer.effectAllowed = 'link';
-    if (data.onFieldDragStart) {
-      data.onFieldDragStart(id as string, fieldName);
+  const handleFieldClick = (fieldName: string) => {
+    if (data.onFieldClick) {
+      data.onFieldClick(id as string, fieldName, data.collectionName);
     }
   };
 
-  const handleFieldDragOver = (e: React.DragEvent, fieldName: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'link';
-    setDragOverField(fieldName);
-  };
-
-  const handleFieldDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverField(null);
-  };
-
-  const handleFieldDrop = (e: React.DragEvent, fieldName: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverField(null);
-    
-    try {
-      const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-      if (dragData.collectionId !== id && data.onFieldDrop) {
-        data.onFieldDrop(fieldName, dragData);
-      }
-    } catch (err) {
-      console.error('Error handling field drop:', err);
-    }
+  const isFieldSelected = (fieldName: string) => {
+    return data.selectedFields?.some(f => f.collectionId === id && f.fieldName === fieldName) || false;
   };
 
   const isFieldConnected = (fieldName: string) => {
@@ -77,6 +45,12 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
 
   const lookupFields = data.fields?.filter(f => f.isLookup) || [];
   const regularFields = data.fields?.filter(f => !f.isLookup) || [];
+  
+  // Limit to 25 fields max
+  const maxFields = 25;
+  const displayLookupFields = lookupFields.slice(0, maxFields);
+  const displayRegularFields = regularFields.slice(0, Math.max(0, maxFields - displayLookupFields.length));
+  const totalHidden = (lookupFields.length + regularFields.length) - (displayLookupFields.length + displayRegularFields.length);
 
   return (
     <div
@@ -122,20 +96,18 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
                 <Link2 className="w-3 h-3" />
                 Lookup Fields ({lookupFields.length})
               </div>
-              {lookupFields.map((field, idx) => {
+              {displayLookupFields.map((field, idx) => {
                 const isConnected = isFieldConnected(field.fieldName);
-                const isDragOver = dragOverField === field.fieldName;
+                const isSelected = isFieldSelected(field.fieldName);
                 return (
                   <div
                     key={idx}
-                    draggable
-                    onDragStart={(e) => handleFieldDragStart(e, field.fieldName)}
-                    onDragOver={(e) => handleFieldDragOver(e, field.fieldName)}
-                    onDragLeave={handleFieldDragLeave}
-                    onDrop={(e) => handleFieldDrop(e, field.fieldName)}
-                    className={`px-3 py-2 border-b border-amber-100 hover:bg-amber-50 transition-all cursor-move ${
+                    onClick={() => handleFieldClick(field.fieldName)}
+                    className={`px-3 py-2 border-b border-amber-100 hover:bg-amber-100 transition-all cursor-pointer select-none ${
+                      isSelected ? 'bg-indigo-200 border-l-4 border-l-indigo-600 ring-2 ring-indigo-400' : ''
+                    } ${
                       isConnected ? 'bg-green-50 border-l-4 border-l-green-500' : ''
-                    } ${isDragOver ? 'bg-indigo-100 border-2 border-indigo-400' : ''}`}
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -166,20 +138,18 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
               <div className="bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
                 Fields ({regularFields.length})
               </div>
-              {regularFields.map((field, idx) => {
+              {displayRegularFields.map((field, idx) => {
                 const isConnected = isFieldConnected(field.fieldName);
-                const isDragOver = dragOverField === field.fieldName;
+                const isSelected = isFieldSelected(field.fieldName);
                 return (
                   <div
                     key={idx}
-                    draggable
-                    onDragStart={(e) => handleFieldDragStart(e, field.fieldName)}
-                    onDragOver={(e) => handleFieldDragOver(e, field.fieldName)}
-                    onDragLeave={handleFieldDragLeave}
-                    onDrop={(e) => handleFieldDrop(e, field.fieldName)}
-                    className={`px-3 py-2 border-b border-gray-100 hover:bg-gray-50 transition-all cursor-move ${
+                    onClick={() => handleFieldClick(field.fieldName)}
+                    className={`px-3 py-2 border-b border-gray-100 hover:bg-gray-100 transition-all cursor-pointer select-none ${
+                      isSelected ? 'bg-indigo-200 border-l-4 border-l-indigo-600 ring-2 ring-indigo-400' : ''
+                    } ${
                       isConnected ? 'bg-green-50 border-l-4 border-l-green-500' : ''
-                    } ${isDragOver ? 'bg-indigo-100 border-2 border-indigo-400' : ''}`}
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -196,6 +166,11 @@ export function CollectionNode({ data, selected, id }: NodeProps<CollectionNodeD
                   </div>
                 );
               })}
+              {totalHidden > 0 && (
+                <div className="px-3 py-2 text-xs text-gray-500 text-center bg-gray-50">
+                  + {totalHidden} more fields (resize node to see more)
+                </div>
+              )}
             </div>
           )}
         </div>

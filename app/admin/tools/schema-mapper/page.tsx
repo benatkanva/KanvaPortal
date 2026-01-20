@@ -31,6 +31,9 @@ function SchemaMapperContent() {
   const [collectionFields, setCollectionFields] = useState<Record<string, any[]>>({});
   const [loadingFields, setLoadingFields] = useState<Record<string, boolean>>({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [selectedFields, setSelectedFields] = useState<Array<{collectionId: string, fieldName: string, collectionName: string}>>([]);
 
   const loadCompleteSchema = useCallback(async () => {
     setLoading(true);
@@ -256,6 +259,67 @@ function SchemaMapperContent() {
     console.log(`✅ Created relationship: ${sourceCollectionId}.${sourceField} → ${targetCollectionId}.${targetField}`);
   }, [nodes, setEdges, updateConnectedFieldsForNodes]);
 
+  // Handle field click for selection
+  const handleFieldClick = useCallback((collectionId: string, fieldName: string, collectionName: string) => {
+    setSelectedFields(prev => {
+      // If clicking same field, deselect it
+      const existing = prev.find(f => f.collectionId === collectionId && f.fieldName === fieldName);
+      if (existing) {
+        return prev.filter(f => !(f.collectionId === collectionId && f.fieldName === fieldName));
+      }
+      
+      // If already have 2 fields selected, replace the oldest
+      if (prev.length >= 2) {
+        return [prev[1], { collectionId, fieldName, collectionName }];
+      }
+      
+      // Add new selection
+      return [...prev, { collectionId, fieldName, collectionName }];
+    });
+  }, []);
+
+  // Create relationship from selected fields
+  const createRelationshipFromSelection = useCallback(() => {
+    if (selectedFields.length !== 2) return;
+    
+    const [parent, child] = selectedFields;
+    
+    // Create new edge (parent -> child)
+    const newEdge: Edge = {
+      id: `${parent.collectionId}-${child.collectionId}-${Date.now()}`,
+      source: parent.collectionId,
+      target: child.collectionId,
+      type: 'smoothstep',
+      animated: true,
+      label: `${parent.fieldName} → ${child.fieldName}`,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 20,
+        height: 20,
+      },
+      data: {
+        sourceField: parent.fieldName,
+        targetField: child.fieldName,
+        fromField: parent.fieldName,
+        toField: child.fieldName,
+        type: '1:many',
+        parentCollection: parent.collectionName,
+        childCollection: child.collectionName,
+      },
+      style: {
+        stroke: '#4F46E5',
+        strokeWidth: 2,
+      },
+    };
+    
+    setEdges((eds) => [...eds, newEdge]);
+    setSelectedEdge(newEdge);
+    setShowRelationshipModal(true);
+    setSelectedFields([]); // Clear selection
+    
+    console.log(`✅ Created relationship: ${parent.collectionName}.${parent.fieldName} (PARENT) → ${child.collectionName}.${child.fieldName} (CHILD)`);
+  }, [selectedFields, setEdges]);
+
   // Add collection to canvas
   const addCollectionToCanvas = async (collection: any) => {
     const connectedFields = getConnectedFields();
@@ -274,7 +338,8 @@ function SchemaMapperContent() {
         fields: [],
         expanded: true,
         connectedFields: connectedFields[collection.id] || [],
-        onFieldDrop: handleFieldDrop,
+        onFieldClick: handleFieldClick,
+        selectedFields: selectedFields,
       },
       style: {
         width: 320,
@@ -289,6 +354,20 @@ function SchemaMapperContent() {
     
     setNodes((nds) => [...nds, newNode]);
   };
+
+  // Update nodes when selectedFields changes
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          selectedFields: selectedFields,
+          onFieldClick: handleFieldClick,
+        },
+      }))
+    );
+  }, [selectedFields, handleFieldClick, setNodes]);
 
   // Define custom node types
   const nodeTypes: NodeTypes = useMemo(
@@ -357,7 +436,52 @@ function SchemaMapperContent() {
     );
   };
 
-  // Save schema configuration to Firestore DB
+  // Autosave function (silent save without alerts)
+  const autoSave = useCallback(async () => {
+    if (nodes.length === 0 && edges.length === 0) return; // Don't save empty schema
+    
+    setAutoSaving(true);
+    try {
+      const schemaData = {
+        collections: allCollections,
+        relationships: edges.map(edge => ({
+          source: edge.source,
+          target: edge.target,
+          sourceField: edge.data?.sourceField || edge.data?.fromField || '',
+          targetField: edge.data?.targetField || edge.data?.toField || '',
+          relationshipType: edge.data?.type || '1:many',
+        })),
+        nodes,
+        edges,
+      };
+      
+      const response = await fetch('/api/schema-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(schemaData),
+      });
+      
+      if (response.ok) {
+        setLastSaved(new Date());
+        console.log('💾 Autosaved at', new Date().toLocaleTimeString());
+      }
+    } catch (err) {
+      console.error('Autosave error:', err);
+    } finally {
+      setAutoSaving(false);
+    }
+  }, [nodes, edges, allCollections]);
+
+  // Autosave on changes (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      autoSave();
+    }, 2000); // Save 2 seconds after last change
+    
+    return () => clearTimeout(timer);
+  }, [nodes, edges, autoSave]);
+
+  // Save schema configuration to Firestore DB (manual save with alert)
   const saveSchema = async () => {
     setLoading(true);
     try {
@@ -382,6 +506,7 @@ function SchemaMapperContent() {
       
       if (response.ok) {
         const result = await response.json();
+        setLastSaved(new Date());
         alert(`✅ Schema saved to Firestore!\n\nLast updated: ${result.lastUpdated}`);
         console.log('✅ Schema saved successfully');
       } else {
@@ -446,7 +571,22 @@ function SchemaMapperContent() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Autosave Indicator */}
+            <div className="flex items-center gap-2 text-sm">
+              {autoSaving ? (
+                <span className="text-blue-600 flex items-center gap-1">
+                  <span className="animate-spin">💾</span>
+                  Saving...
+                </span>
+              ) : lastSaved ? (
+                <span className="text-green-600 flex items-center gap-1">
+                  ✓ Saved {new Date(lastSaved).toLocaleTimeString()}
+                </span>
+              ) : null}
+            </div>
+            
+            <div className="flex items-center gap-2">
             <button
               onClick={saveSchema}
               disabled={loading}
@@ -462,6 +602,7 @@ function SchemaMapperContent() {
               <Download className="w-4 h-4" />
               Export
             </button>
+            </div>
           </div>
         </div>
       </div>
@@ -570,8 +711,34 @@ function SchemaMapperContent() {
               </div>
             </Panel>
 
+            {/* Create Relationship Button - Shows when 2 fields selected */}
+            {selectedFields.length === 2 && (
+              <Panel position="top-center">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg shadow-2xl border-2 border-white">
+                  <div className="text-xs mb-1 opacity-90">
+                    {selectedFields[0].collectionName}.{selectedFields[0].fieldName} → {selectedFields[1].collectionName}.{selectedFields[1].fieldName}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={createRelationshipFromSelection}
+                      className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold hover:bg-indigo-50 transition-colors flex items-center gap-2"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      Create Relationship
+                    </button>
+                    <button
+                      onClick={() => setSelectedFields([])}
+                      className="text-white hover:bg-white/20 px-3 py-2 rounded-lg transition-colors text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </Panel>
+            )}
+
             {/* Center View Button */}
-            <Panel position="bottom-right">
+            <Panel position="bottom-right" className="mb-24">
               <button
                 onClick={() => fitView({ padding: 0.2, duration: 400 })}
                 className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
