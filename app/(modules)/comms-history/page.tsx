@@ -452,34 +452,132 @@ export default function CommsHistoryPage() {
             </div>
           </div>
 
-          {/* Daily Activity Chart */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-kanva-green" />
-              Daily Activity
-            </h2>
-            
-            <div className="space-y-2">
-              {Object.entries(myMetrics.callsByDay)
-                .sort(([a], [b]) => b.localeCompare(a))
-                .slice(0, 14)
-                .map(([date, count]) => (
-                  <div key={date} className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600 w-24">{format(new Date(date), 'MMM dd')}</span>
-                    <div className="flex-1 bg-gray-200 rounded-full h-8 relative">
-                      <div
-                        className="bg-kanva-green h-8 rounded-full flex items-center justify-end pr-3"
-                        style={{
-                          width: `${Math.min((count / Math.max(...Object.values(myMetrics.callsByDay))) * 100, 100)}%`,
-                        }}
-                      >
-                        <span className="text-sm font-medium text-white">{count}</span>
+          {/* Daily Activity Chart - Team View for Admins */}
+          {isAdmin && teamMetrics.length > 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-kanva-green" />
+                Team Daily Activity
+              </h2>
+              
+              {/* Legend */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                {teamMetrics.slice(0, 7).map((member, idx) => {
+                  const colors = [
+                    'bg-blue-500',
+                    'bg-green-500', 
+                    'bg-purple-500',
+                    'bg-orange-500',
+                    'bg-pink-500',
+                    'bg-indigo-500',
+                    'bg-yellow-500'
+                  ];
+                  return (
+                    <div key={member.userId} className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${colors[idx]}`}></div>
+                      <span className="text-xs text-gray-600">{member.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="space-y-2">
+                {eachDayOfInterval({
+                  start: new Date(dateRange.start),
+                  end: new Date(dateRange.end)
+                })
+                  .reverse()
+                  .slice(0, 14)
+                  .map((date) => {
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    const colors = [
+                      'bg-blue-500',
+                      'bg-green-500',
+                      'bg-purple-500',
+                      'bg-orange-500',
+                      'bg-pink-500',
+                      'bg-indigo-500',
+                      'bg-yellow-500'
+                    ];
+                    
+                    // Get calls for each team member on this date
+                    const memberCalls = teamMetrics.slice(0, 7).map((member, idx) => ({
+                      name: member.name,
+                      calls: member.callsByDay?.[dateStr] || 0,
+                      color: colors[idx]
+                    }));
+                    
+                    const totalCalls = memberCalls.reduce((sum, m) => sum + m.calls, 0);
+                    const maxDailyCalls = Math.max(...eachDayOfInterval({
+                      start: new Date(dateRange.start),
+                      end: new Date(dateRange.end)
+                    }).map(d => {
+                      const dStr = format(d, 'yyyy-MM-dd');
+                      return teamMetrics.reduce((sum, m) => sum + (m.callsByDay?.[dStr] || 0), 0);
+                    }));
+                    
+                    return (
+                      <div key={dateStr} className="flex items-center gap-4">
+                        <span className="text-sm text-gray-600 w-24">{format(date, 'MMM dd')}</span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-8 relative overflow-hidden">
+                          <div className="flex h-8" style={{ width: `${maxDailyCalls > 0 ? (totalCalls / maxDailyCalls) * 100 : 0}%` }}>
+                            {memberCalls.map((member, idx) => {
+                              const width = totalCalls > 0 ? (member.calls / totalCalls) * 100 : 0;
+                              return member.calls > 0 ? (
+                                <div
+                                  key={idx}
+                                  className={`${member.color} h-8 flex items-center justify-center`}
+                                  style={{ width: `${width}%` }}
+                                  title={`${member.name}: ${member.calls} calls`}
+                                >
+                                  {width > 15 && (
+                                    <span className="text-xs font-medium text-white">{member.calls}</span>
+                                  )}
+                                </div>
+                              ) : null;
+                            })}
+                          </div>
+                          {totalCalls > 0 && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-700">
+                              {totalCalls}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ) : (
+            /* Personal Daily Activity for non-admins */
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-kanva-green" />
+                Daily Activity
+              </h2>
+              
+              <div className="space-y-2">
+                {Object.entries(myMetrics.callsByDay)
+                  .sort(([a], [b]) => b.localeCompare(a))
+                  .slice(0, 14)
+                  .map(([date, count]) => (
+                    <div key={date} className="flex items-center gap-4">
+                      <span className="text-sm text-gray-600 w-24">{format(new Date(date), 'MMM dd')}</span>
+                      <div className="flex-1 bg-gray-200 rounded-full h-8 relative">
+                        <div
+                          className="bg-kanva-green h-8 rounded-full flex items-center justify-end pr-3"
+                          style={{
+                            width: `${Math.min((count / Math.max(...Object.values(myMetrics.callsByDay))) * 100, 100)}%`,
+                          }}
+                        >
+                          <span className="text-sm font-medium text-white">{count}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
 

@@ -80,14 +80,52 @@ export async function GET(request: NextRequest) {
     }
 
     const metrics = metricsDoc.data();
+    
+    // Filter callsByDay to match the requested date range
+    const callsByDay = metrics?.callsByDay || {};
+    let filteredCalls = 0;
+    let filteredCallsByDay: Record<string, number> = {};
+    
+    // Filter calls by the requested date range
+    Object.entries(callsByDay).forEach(([dateStr, count]) => {
+      const callDate = parseISO(dateStr);
+      if (callDate >= start && callDate <= end) {
+        filteredCalls += (count as number);
+        filteredCallsByDay[dateStr] = count as number;
+      }
+    });
+    
+    // Calculate filtered metrics proportionally
+    const totalCalls = metrics?.totalCalls || 0;
+    const ratio = totalCalls > 0 ? filteredCalls / totalCalls : 0;
+    
+    const filteredMetrics = {
+      totalCalls: filteredCalls,
+      inboundCalls: Math.round((metrics?.inboundCalls || 0) * ratio),
+      outboundCalls: Math.round((metrics?.outboundCalls || 0) * ratio),
+      completedCalls: Math.round((metrics?.completedCalls || 0) * ratio),
+      missedCalls: Math.round((metrics?.missedCalls || 0) * ratio),
+      totalDuration: Math.round((metrics?.totalDuration || 0) * ratio),
+      averageDuration: metrics?.averageDuration || 0,
+      connectionRate: metrics?.connectionRate || 0,
+      callsByDay: filteredCallsByDay,
+      callsByStatus: metrics?.callsByStatus || {},
+      trend: metrics?.trend || 'stable',
+      previousPeriodCalls: metrics?.previousPeriodCalls || 0,
+      change: metrics?.change || 0,
+      changePercent: metrics?.changePercent || 0
+    };
 
     return NextResponse.json({
       success: true,
       email: email,
       dateRange: { start: startDate, end: endDate },
       period: period,
-      metrics: metrics,
-      cached: true
+      metrics: filteredMetrics,
+      cached: true,
+      filtered: true,
+      originalTotal: totalCalls,
+      filteredTotal: filteredCalls
     });
 
   } catch (error) {

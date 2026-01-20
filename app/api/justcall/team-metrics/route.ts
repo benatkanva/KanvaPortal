@@ -95,26 +95,45 @@ export async function GET(request: NextRequest) {
 
         const metrics = metricsDoc.data();
         
+        // Filter callsByDay to match the requested date range
+        const callsByDay = metrics?.callsByDay || {};
+        let filteredCalls = 0;
+        let filteredCallsByDay: Record<string, number> = {};
+        
+        // Filter calls by the requested date range
+        Object.entries(callsByDay).forEach(([dateStr, count]) => {
+          const callDate = new Date(dateStr);
+          if (callDate >= start && callDate <= end) {
+            filteredCalls += (count as number);
+            filteredCallsByDay[dateStr] = count as number;
+          }
+        });
+        
+        // Calculate filtered metrics proportionally
+        const totalCalls = metrics?.totalCalls || 0;
+        const ratio = totalCalls > 0 ? filteredCalls / totalCalls : 0;
+        
         const memberMetric = {
           userId: userDoc.id,
           name: user.name || email.split('@')[0],
           email: email,
-          calls: metrics?.totalCalls || 0,
-          inbound: metrics?.inboundCalls || 0,
-          outbound: metrics?.outboundCalls || 0,
-          completed: metrics?.completedCalls || 0,
-          missed: metrics?.missedCalls || 0,
-          talkTime: metrics?.totalDuration || 0,
+          calls: filteredCalls,
+          inbound: Math.round((metrics?.inboundCalls || 0) * ratio),
+          outbound: Math.round((metrics?.outboundCalls || 0) * ratio),
+          completed: Math.round((metrics?.completedCalls || 0) * ratio),
+          missed: Math.round((metrics?.missedCalls || 0) * ratio),
+          talkTime: Math.round((metrics?.totalDuration || 0) * ratio),
           avgDuration: metrics?.averageDuration || 0,
           connectionRate: metrics?.connectionRate || 0,
           trend: metrics?.trend || 'stable',
           previousPeriodCalls: metrics?.previousPeriodCalls || 0,
           change: metrics?.change || 0,
-          changePercent: metrics?.changePercent || 0
+          changePercent: metrics?.changePercent || 0,
+          callsByDay: filteredCallsByDay
         };
         
         teamMetrics.push(memberMetric);
-        console.log(`[Team Metrics] Added ${email}: ${metrics?.totalCalls || 0} calls (cached)`);
+        console.log(`[Team Metrics] Added ${email}: ${filteredCalls} calls (filtered from ${totalCalls} cached)`);
       } catch (error) {
         console.error(`[Team Metrics] Error fetching metrics for ${email}:`, error);
         // Continue with other users
