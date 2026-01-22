@@ -17,6 +17,9 @@ interface SalesOrder {
   productDetails?: string;
   commissionAmount?: number;
   commissionRate?: number;
+  rateModified?: boolean;
+  rateComment?: string;
+  originalRate?: number;
   customerSegment?: string;
   customerStatus?: string;
   movedFromMonth?: string;
@@ -46,6 +49,9 @@ export default function EditCommissionsTab({ isAdmin }: EditCommissionsTabProps)
   const [moveToMonth, setMoveToMonth] = useState('');
   const [moveToYear, setMoveToYear] = useState('');
   const [moveReason, setMoveReason] = useState('');
+  const [editingRateId, setEditingRateId] = useState<string | null>(null);
+  const [rateValue, setRateValue] = useState('');
+  const [rateComment, setRateComment] = useState('');
 
   // Initialize with current month/year
   useEffect(() => {
@@ -193,6 +199,79 @@ export default function EditCommissionsTab({ isAdmin }: EditCommissionsTabProps)
   function cancelEditingNote() {
     setEditingNoteId(null);
     setNoteText('');
+  }
+
+  function startEditingRate(orderId: string, currentRate: number) {
+    if (!isAdmin) {
+      toast.error('Only admins can edit commission rates');
+      return;
+    }
+    setEditingRateId(orderId);
+    setRateValue(currentRate ? currentRate.toFixed(1) : '0.0');
+    setRateComment('');
+  }
+
+  function cancelEditingRate() {
+    setEditingRateId(null);
+    setRateValue('');
+    setRateComment('');
+  }
+
+  async function saveRate(orderId: string) {
+    if (!isAdmin) return;
+
+    const newRate = parseFloat(rateValue);
+    if (isNaN(newRate) || newRate < 0 || newRate > 100) {
+      toast.error('Please enter a valid rate between 0 and 100');
+      return;
+    }
+
+    if (!rateComment.trim()) {
+      toast.error('Please add a comment explaining the rate change');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch('/api/update-commission-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          newRate,
+          comment: rateComment,
+          month: selectedMonth,
+          year: selectedYear
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to update rate');
+
+      const data = await response.json();
+      
+      // Update local state with new rate, commission amount, and rate modified flag
+      setOrders(prev => prev.map(order => 
+        order.id === orderId 
+          ? { 
+              ...order, 
+              commissionRate: newRate,
+              commissionAmount: data.newCommissionAmount,
+              rateModified: true,
+              rateComment: rateComment
+            }
+          : order
+      ));
+
+      setEditingRateId(null);
+      setRateValue('');
+      setRateComment('');
+      toast.success(`Rate updated to ${newRate.toFixed(1)}% - Commission: $${data.newCommissionAmount.toLocaleString()}`);
+    } catch (error) {
+      console.error('Error updating rate:', error);
+      toast.error('Failed to update rate');
+    } finally {
+      setSaving(false);
+    }
   }
 
   function startMovingOrder(orderId: string) {
@@ -500,7 +579,66 @@ export default function EditCommissionsTab({ isAdmin }: EditCommissionsTabProps)
                       ${order.totalPrice?.toLocaleString() || '0'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {order.commissionRate ? `${order.commissionRate.toFixed(1)}%` : '-'}
+                      {editingRateId === order.id ? (
+                        <div className="flex flex-col space-y-2 min-w-[200px]">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              value={rateValue}
+                              onChange={(e) => setRateValue(e.target.value)}
+                              step="0.1"
+                              min="0"
+                              max="100"
+                              placeholder="0.0"
+                              className="input text-sm py-2 px-3 w-20 font-semibold"
+                              autoFocus
+                            />
+                            <span className="text-sm font-medium">%</span>
+                          </div>
+                          <input
+                            type="text"
+                            value={rateComment}
+                            onChange={(e) => setRateComment(e.target.value)}
+                            placeholder="Reason for rate change..."
+                            className="input text-xs py-2 px-3 w-full"
+                          />
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => saveRate(order.id)}
+                              disabled={saving}
+                              className="flex-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50"
+                              title="Save rate"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEditingRate}
+                              className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
+                              title="Cancel"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <span className={order.rateModified ? 'text-red-600 font-semibold' : ''}>
+                            {order.commissionRate ? `${order.commissionRate.toFixed(1)}%` : '-'}
+                          </span>
+                          {order.rateModified && (
+                            <span className="text-xs text-red-600" title={order.rateComment}>✏️</span>
+                          )}
+                          {isAdmin && (
+                            <button
+                              onClick={() => startEditingRate(order.id, order.commissionRate || 0)}
+                              className="text-gray-400 hover:text-primary-600"
+                              title="Edit rate"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-primary-600">
                       ${order.commissionAmount?.toLocaleString() || '0'}

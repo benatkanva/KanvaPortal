@@ -71,7 +71,7 @@ async function markProgress(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { month, year, salesPerson } = body;
+    const { month, year, salesPerson, diagnosticMode } = body;
 
     if (!month || !year) {
       return NextResponse.json(
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     
     // WARNING: If deployed to serverless, this background promise can be killed after the response.
     // Prefer a Firestore-triggered Cloud Function in production.
-    calculateCommissionsWithProgress(calcId, month, year, salesPerson).catch(error => {
+    calculateCommissionsWithProgress(calcId, month, year, salesPerson, diagnosticMode).catch(error => {
       console.error('❌ Background calculation failed:', error);
     });
     
@@ -125,7 +125,8 @@ async function calculateCommissionsWithProgress(
   calcId: string,
   month: string,
   year: number,
-  salesPerson?: string
+  salesPerson?: string,
+  diagnosticMode?: boolean
 ) {
   const progressRef = adminDb.collection('commission_calc_progress').doc(calcId);
   const commissionMonth = `${year}-${month.padStart(2, '0')}`;
@@ -154,6 +155,15 @@ async function calculateCommissionsWithProgress(
   try {
     console.log(`Calculating monthly commissions for ${year}-${month}${salesPerson ? ` (${salesPerson})` : ' (all reps)'}`);
     console.log(`Period: ${periodStart.toISOString().split('T')[0]} to ${periodEnd.toISOString().split('T')[0]}`);
+
+    // Initialize diagnostic CSV if enabled
+    let diagnosticFilePath = '';
+    let diagnosticRows: string[] = [];
+    if (diagnosticMode) {
+      diagnosticFilePath = path.join(process.cwd(), 'public', `diagnostic-${commissionMonth}-${Date.now()}.csv`);
+      diagnosticRows.push('Order,Customer,Rep,Status,Segment,Revenue,Rate,Commission,Rate Modified,Preserved Rate,Shipping Adjustment,Line Items,Exclusions,Notes');
+      console.log(`📊 Diagnostic mode enabled - will generate ${diagnosticFilePath}`);
+    }
 
     // Get commission rates from settings (load all title-specific rate documents)
     const settingsSnapshot = await adminDb.collection('settings').get();
@@ -196,12 +206,9 @@ async function calculateCommissionsWithProgress(
     };
     console.log('Commission rules:', commissionRules);
 
-    // 🔥 Clear previous month records using chunked deletions (FIXED)
-    console.log('🗑️ Clearing existing commission data...');
-    await deleteByMonthInChunks('monthly_commissions', 'commissionMonth', commissionMonth);
-    await deleteByMonthInChunks('monthly_commission_summary', 'month', commissionMonth);
-    await deleteByMonthInChunks('commission_calculation_logs', 'commissionMonth', commissionMonth);
-    console.log('✅ Existing data cleared');
+    // ⚠️ DO NOT DELETE existing commissions - we need to check for manual edits first
+    // The preservation logic below will handle existing records with rateModified flags
+    console.log('🔄 Will update existing records and preserve manual edits...');
 
     // Load active spiffs for the period
     const spiffsSnapshot = await adminDb.collection('spiffs')
@@ -579,7 +586,7 @@ async function calculateCommissionsWithProgress(
       // Calculate commission base by excluding shipping and CC processing if configured
       // Note: order.revenue may not exist in new imports, will be calculated from line items below
       let orderAmount = commissionRules?.useOrderValue ? (order.orderValue || order.revenue || 0) : (order.revenue || 0);
-      let negativeAdjustments = 0; // Track negative items separately (rep-paid shipping, credits, refunds)
+      let negativeShippingAdjustment = 0; // Track negative Paid Shipping to deduct from commission AFTER calculation
       
       // Always calculate from line items (needed because order.revenue may not exist in new imports)
       const revenueLineItemsSnapshot = await adminDb.collection('fishbowl_soitems')
@@ -597,7 +604,20 @@ async function calculateCommissionsWithProgress(
             const productNum = (lineItem.productNum || '').toLowerCase();
             const itemPrice = lineItem.totalPrice || 0;
             
-            // Check if this line item should be excluded
+            // Check if this is negative Paid Shipping (special case - deducts from commission, not revenue)
+            const isNegativePaidShipping = itemPrice < 0 && (
+              productName.includes('paid shipping') ||
+              productName.includes('ae paid shipping')
+            );
+            
+            if (isNegativePaidShipping) {
+              // Track this separately - will be deducted from commission amount after calculation
+              negativeShippingAdjustment += itemPrice; // itemPrice is already negative
+              console.log(`  💸 NEGATIVE PAID SHIPPING (deducts from commission): ${lineItem.productNum || lineItem.partNumber} | ${lineItem.productName} | $${itemPrice}`);
+              continue; // Don't include in revenue calculation
+            }
+            
+            // Check if this line item should be excluded from revenue
             const isShipping = commissionRules?.excludeShipping && (
               productName.includes('shipping') || 
               productNum.includes('shipping') ||
@@ -611,7 +631,7 @@ async function calculateCommissionsWithProgress(
               productNum === 'cc processing'
             );
             
-            // Include negative items (credits/refunds) in revenue base calculation
+            // Include other negative items (credits/refunds) in revenue base calculation
             // This ensures commission is calculated on NET revenue (positive items - credits)
             if (itemPrice < 0) {
               commissionableAmount += itemPrice; // Add negative value (reduces total)
@@ -637,27 +657,21 @@ async function calculateCommissionsWithProgress(
             console.log(`\n🔍 ORDER 9082 CALCULATION:`);
             console.log(`   Positive items base: $${commissionableAmount.toFixed(2)}`);
             console.log(`   Commission at ${rate}%: $${(commissionableAmount * rate / 100).toFixed(2)}`);
-            console.log(`   Negative adjustments: $${negativeAdjustments.toFixed(2)}`);
-            console.log(`   Final commission: $${((commissionableAmount * rate / 100) + negativeAdjustments).toFixed(2)}`);
+            console.log(`   Negative Paid Shipping adjustment: $${negativeShippingAdjustment.toFixed(2)}`);
+            console.log(`   Final commission: $${((commissionableAmount * rate / 100) + negativeShippingAdjustment).toFixed(2)}`);
             console.log(`   CFO Expected: $2,380.40`);
           }
         }
       }
 
-      // Calculate commission on net revenue (positive items minus credits/refunds)
-      // Negative adjustments are no longer used - all items included in orderAmount
-      const commissionAmount = new Decimal(orderAmount).times(rate).dividedBy(100).toNumber();
-
-      totalCommission += commissionAmount;
-      commissionsCalculated++;
-
-      // Log successful commission calculation
-      console.log(`✅ COMMISSION CALCULATED: Order ${order.soNumber || order.num} | ${rep.name} | ${customerSegment} | ${customerStatus} | $${orderAmount.toFixed(2)} × ${rate}% = $${commissionAmount.toFixed(2)}`);
+      // Calculate commission on net revenue
+      let commissionAmount = new Decimal(orderAmount).times(rate).dividedBy(100).toNumber();
       
-      // Detailed file log
-      const detailLogPath = path.join(process.cwd(), `commission-calc-debug-${commissionMonth}.txt`);
-      const detailLogEntry = `  ✅ CALCULATED: $${orderAmount.toFixed(2)} × ${rate}% = $${commissionAmount.toFixed(2)}\n`;
-      fs.appendFileSync(detailLogPath, detailLogEntry);
+      // Apply negative Paid Shipping adjustment (deduct from commission, not revenue)
+      if (negativeShippingAdjustment !== 0) {
+        commissionAmount += negativeShippingAdjustment; // negativeShippingAdjustment is already negative
+        console.log(`  💸 Applied Paid Shipping adjustment: $${negativeShippingAdjustment.toFixed(2)} → Final commission: $${commissionAmount.toFixed(2)}`);
+      }
 
       // Save calculation log for UI display
       const logId = `log_${order.salesOrderId}_${Date.now()}`;
@@ -694,9 +708,28 @@ async function calculateCommissionsWithProgress(
       const commissionId = `${effectiveSalesPerson}_${commissionMonth}_order_${order.salesOrderId}`;
       const commissionRef = adminDb.collection('monthly_commissions').doc(commissionId);
       
-      // Check if this commission already exists and has a manual override
+      // Check if this commission already exists and has a manual override OR manual rate edit
       const existingCommission = await commissionRef.get();
-      const hasManualOverride = existingCommission.exists && existingCommission.data()?.isOverride === true;
+      const existingData = existingCommission.exists ? existingCommission.data() : null;
+      const hasManualOverride = existingData?.isOverride === true;
+      const hasManualRateEdit = existingData?.rateModified === true;
+      
+      // Debug logging - write to file so user can see it
+      if (existingCommission.exists && (order.soNumber === '9926' || hasManualRateEdit)) {
+        const debugLogPath = path.join(process.cwd(), `rate-preservation-debug-${commissionMonth}.txt`);
+        const debugMsg = `
+🔍 Order ${order.soNumber || order.num} (${order.customerName}):
+   Document ID: ${commissionId}
+   Exists: ${existingCommission.exists}
+   rateModified: ${existingData?.rateModified}
+   commissionRate: ${existingData?.commissionRate}%
+   hasManualRateEdit: ${hasManualRateEdit}
+   Calculated rate from rules: ${rate}%
+   ${hasManualRateEdit ? '✏️ PRESERVING RATE EDIT' : '❌ NO RATE EDIT FLAG'}
+`;
+        fs.appendFileSync(debugLogPath, debugMsg);
+        console.log(debugMsg);
+      }
       
       if (hasManualOverride) {
         // Preserve manual override - only update non-override fields
@@ -716,8 +749,39 @@ async function calculateCommissionsWithProgress(
           calculatedAt: new Date(),
           notes: `${accountType} - ${customerStatus} - ${customerSegment} [OVERRIDE PRESERVED]`
         });
+      } else if (hasManualRateEdit) {
+        // Preserve manual rate edit - keep custom rate and recalculated commission
+        const preservedRate = existingData.commissionRate;
+        const preservedComment = existingData.rateComment;
+        const preservedOriginalRate = existingData.originalRate;
+        
+        console.log(`✏️  PRESERVING MANUAL RATE EDIT for Order ${order.soNumber || order.num} - keeping ${preservedRate}% rate (was ${rate}%)`);
+        
+        // Recalculate commission with PRESERVED rate (in case revenue changed from Paid Shipping fix)
+        let preservedCommissionAmount = new Decimal(orderAmount).times(preservedRate).dividedBy(100).toNumber();
+        
+        // Apply negative Paid Shipping adjustment with preserved rate
+        if (negativeShippingAdjustment !== 0) {
+          preservedCommissionAmount += negativeShippingAdjustment;
+        }
+        
+        await commissionRef.update({
+          // Update metadata and revenue fields
+          repName: rep.name,
+          repTitle: rep.title,
+          customerName: order.customerName,
+          accountType: accountType,
+          customerSegment: customerSegment,
+          customerStatus: customerStatus,
+          orderRevenue: commissionRules?.useOrderValue ? orderAmount : (order.revenue || orderAmount),
+          orderValue: order.orderValue || order.revenue || orderAmount,
+          // PRESERVE: commissionRate, rateModified, rateComment, originalRate
+          commissionAmount: preservedCommissionAmount, // Recalc with preserved rate
+          calculatedAt: new Date(),
+          notes: `${accountType} - ${customerStatus} - ${customerSegment} [RATE EDIT: ${preservedRate}% - ${preservedComment}]`
+        });
       } else {
-        // No override - normal save/update
+        // No override or rate edit - normal save/update
         await commissionRef.set({
           id: commissionId,
           repId: rep.id,
@@ -748,6 +812,55 @@ async function calculateCommissionsWithProgress(
           paidStatus: 'pending',
           notes: `${accountType} - ${customerStatus} - ${customerSegment}`
         });
+      }
+
+      // Determine final commission amount after preservation logic
+      let finalCommissionAmount = commissionAmount;
+      let finalRate = rate;
+      
+      if (hasManualRateEdit) {
+        finalCommissionAmount = existingData?.commissionAmount || commissionAmount;
+        finalRate = existingData?.commissionRate || rate;
+      } else if (hasManualOverride) {
+        finalCommissionAmount = existingData?.commissionAmount || commissionAmount;
+      }
+      
+      // Add to totals using FINAL amount
+      totalCommission += finalCommissionAmount;
+      commissionsCalculated++;
+
+      // Log successful commission calculation with FINAL amount
+      console.log(`✅ COMMISSION CALCULATED: Order ${order.soNumber || order.num} | ${rep.name} | ${customerSegment} | ${customerStatus} | $${orderAmount.toFixed(2)} × ${finalRate}% = $${finalCommissionAmount.toFixed(2)}${hasManualRateEdit ? ' [RATE PRESERVED]' : ''}`);
+      
+      // Detailed file log
+      const detailLogPath = path.join(process.cwd(), `commission-calc-debug-${commissionMonth}.txt`);
+      const detailLogEntry = `  ✅ CALCULATED: $${orderAmount.toFixed(2)} × ${finalRate}% = $${finalCommissionAmount.toFixed(2)}\n`;
+      fs.appendFileSync(detailLogPath, detailLogEntry);
+
+      // Add diagnostic row if diagnostic mode is enabled - use FINAL amount
+      if (diagnosticMode) {
+        const rateModifiedFlag = hasManualRateEdit ? 'YES' : 'NO';
+        const preservedRateNote = hasManualRateEdit ? `${finalRate}% (original ${rate}%)` : 'N/A';
+        const shippingAdj = negativeShippingAdjustment !== 0 ? `$${negativeShippingAdjustment.toFixed(2)}` : 'None';
+        const notes = hasManualRateEdit ? `Rate preserved: ${existingData.rateComment || 'No comment'}` : 
+                      hasManualOverride ? 'Manual override preserved' : 'Normal calculation';
+        
+        diagnosticRows.push([
+          `"${order.soNumber || order.num}"`,
+          `"${order.customerName}"`,
+          `"${rep.name}"`,
+          `"${customerStatus}"`,
+          `"${customerSegment}"`,
+          `"$${orderAmount.toFixed(2)}"`,
+          `"${finalRate}%"`,
+          `"$${finalCommissionAmount.toFixed(2)}"`,
+          `"${rateModifiedFlag}"`,
+          `"${preservedRateNote}"`,
+          `"${shippingAdj}"`,
+          `"${revenueLineItemsSnapshot?.size || 0}"`,
+          `"Shipping/CC excluded"`,
+          `"${notes}"`
+        ].join(','));
       }
 
       // Calculate spiffs from line items
@@ -867,12 +980,12 @@ async function calculateCommissionsWithProgress(
       const repSummary = commissionsByRep.get(canonicalSalesPerson);
       repSummary.orders++;
       repSummary.revenue += orderAmount; // Use calculated orderAmount, not order.revenue (which may be undefined)
-      repSummary.commission += commissionAmount;
+      repSummary.commission += finalCommissionAmount; // Use FINAL amount (accounts for preserved rates)
       repSummary.spiffs += orderSpiffTotal;
       
       // DEBUG: Track running totals
       if (canonicalSalesPerson === 'BenW' || canonicalSalesPerson === 'Ben Wallner') {
-        console.log(`   💰 ${order.salesPerson} -> ${canonicalSalesPerson} | Commission: $${commissionAmount.toFixed(2)} | Running Total: $${repSummary.commission.toFixed(2)} | Orders: ${repSummary.orders}`);
+        console.log(`   💰 ${order.salesPerson} -> ${canonicalSalesPerson} | Commission: $${finalCommissionAmount.toFixed(2)} | Running Total: $${repSummary.commission.toFixed(2)} | Orders: ${repSummary.orders}`);
       }
     }
 
@@ -943,6 +1056,14 @@ async function calculateCommissionsWithProgress(
     
     console.log('\n' + '='.repeat(80) + '\n');
 
+    // Write diagnostic CSV if enabled
+    let diagnosticFileName = '';
+    if (diagnosticMode && diagnosticRows.length > 0) {
+      fs.writeFileSync(diagnosticFilePath, diagnosticRows.join('\n'));
+      diagnosticFileName = path.basename(diagnosticFilePath);
+      console.log(`📊 Diagnostic CSV written: ${diagnosticFilePath} (${diagnosticRows.length} rows)`);
+    }
+
     // Format rep breakdown for UI
     const repBreakdown: { [key: string]: any } = {};
     for (const [salesPerson, summary] of commissionsByRep.entries()) {
@@ -968,6 +1089,7 @@ async function calculateCommissionsWithProgress(
       status: 'complete',
       currentOrder: processed,
       percentage: 100,
+      diagnosticFile: diagnosticFileName || null,
       stats: {
         commissionsCalculated,
         totalCommission,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calculator, Calendar, RefreshCw, FileText, AlertCircle, CheckCircle, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { Calculator, Calendar, RefreshCw, FileText, AlertCircle, CheckCircle, TrendingUp, Users, DollarSign, Download } from 'lucide-react';
 import ValidationModal from './modals/ValidationModal';
 import ProcessingModal from './modals/ProcessingModal';
 import toast from 'react-hot-toast';
@@ -22,6 +22,9 @@ interface CommissionSummary {
 export default function CalculateTab({ onCalculationComplete }: CalculateTabProps) {
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedRep, setSelectedRep] = useState<string>('all');
+  const [diagnosticMode, setDiagnosticMode] = useState(false);
+  const [diagnosticFile, setDiagnosticFile] = useState<string | null>(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [showProcessingModal, setShowProcessingModal] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
@@ -46,6 +49,14 @@ export default function CalculateTab({ onCalculationComplete }: CalculateTabProp
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
+  const salesReps = [
+    { value: 'all', label: 'All Sales Reps' },
+    { value: 'BenW', label: 'Ben Wallner' },
+    { value: 'JaredL', label: 'Jared Leuzinger' },
+    { value: 'DerekW', label: 'Derek Whitworth' },
+    { value: 'BrandonG', label: 'Brandon Good' },
+  ];
+
   const handleStartCalculation = () => {
     setShowValidationModal(true);
   };
@@ -65,7 +76,9 @@ export default function CalculateTab({ onCalculationComplete }: CalculateTabProp
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           month: String(selectedMonth).padStart(2, '0'), 
-          year: selectedYear 
+          year: selectedYear,
+          salesPerson: selectedRep !== 'all' ? selectedRep : undefined,
+          diagnosticMode: diagnosticMode
         })
       });
       
@@ -96,6 +109,11 @@ export default function CalculateTab({ onCalculationComplete }: CalculateTabProp
             setProcessingStatus('Complete!');
             setProcessingProgress(100);
             setCalculating(false);
+            
+            // Check if diagnostic file was generated
+            if (progress.diagnosticFile) {
+              setDiagnosticFile(progress.diagnosticFile);
+            }
             
             const { currentOrder, totalOrders } = progress;
             
@@ -214,7 +232,7 @@ export default function CalculateTab({ onCalculationComplete }: CalculateTabProp
           Select Calculation Period
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Month
@@ -248,9 +266,43 @@ export default function CalculateTab({ onCalculationComplete }: CalculateTabProp
               ))}
             </select>
           </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sales Rep
+            </label>
+            <select
+              value={selectedRep}
+              onChange={(e) => setSelectedRep(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {salesReps.map((rep) => (
+                <option key={rep.value} value={rep.value}>
+                  {rep.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6">
+          <label className="flex items-center space-x-2 mb-4">
+            <input
+              type="checkbox"
+              checked={diagnosticMode}
+              onChange={(e) => setDiagnosticMode(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Generate Diagnostic Report (CSV)
+            </span>
+            <span className="text-xs text-gray-500">
+              - Detailed breakdown of all calculations, exclusions, and rate preservation
+            </span>
+          </label>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
           <div className="text-sm text-gray-600">
             <AlertCircle className="w-4 h-4 inline mr-1" />
             Calculation will process all Fishbowl orders for this period
@@ -274,6 +326,31 @@ export default function CalculateTab({ onCalculationComplete }: CalculateTabProp
           </div>
         </div>
       </div>
+
+      {/* Diagnostic Report Download */}
+      {diagnosticFile && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <FileText className="w-5 h-5 mr-2 text-yellow-600" />
+              <div>
+                <div className="font-medium text-yellow-900">Diagnostic Report Generated</div>
+                <div className="text-sm text-yellow-700 mt-1">
+                  Detailed breakdown of calculations, rate preservation, and shipping adjustments
+                </div>
+              </div>
+            </div>
+            <a
+              href={`/api/download-diagnostic?file=${diagnosticFile}`}
+              download
+              className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700 transition-colors flex items-center"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download CSV
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Last Calculation Summary */}
       {commissionSummary && (
