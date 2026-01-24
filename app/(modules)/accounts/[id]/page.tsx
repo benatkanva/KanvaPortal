@@ -185,9 +185,10 @@ export default function AccountDetailPage() {
 
   return (
     <div 
-      className="min-h-screen bg-gray-50 transition-all duration-300"
+      className="fixed inset-0 bg-gray-50 transition-all duration-300"
       style={{ 
-        marginLeft: mainSidebarCollapsed ? '64px' : '256px'
+        top: '64px',
+        left: mainSidebarCollapsed ? '64px' : '256px'
       }}
     >
       {/* Header */}
