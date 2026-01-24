@@ -44,7 +44,7 @@ export function SavedFiltersPanel({
   return (
     <div
       className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 relative ${
-        isCollapsed ? 'w-12' : 'w-56'
+        isCollapsed ? 'w-12' : 'w-60'
       }`}
     >
       {/* Collapse Button - Top right edge */}
