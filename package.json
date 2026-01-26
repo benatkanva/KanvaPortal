@@ -17,7 +17,7 @@
     "discover-relationships": "ts-node --project tsconfig.scripts.json scripts/discover-relationships.ts",
     "analyze-data-access": "ts-node --project tsconfig.scripts.json scripts/analyze-data-access.ts",
     "inspect-schema": "ts-node --project tsconfig.scripts.json scripts/inspect-complete-schema.ts",
-    "migrate-to-supabase": "tsx scripts/migrate-firestore-to-supabase.ts"
+    "migrate-to-supabase": "tsx scripts/migrate-to-multitenant-supabase.ts"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",

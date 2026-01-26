@@ -259,6 +259,82 @@ CREATE TRIGGER update_deals_updated_at BEFORE UPDATE ON deals
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
+-- ORDERS TABLE (Fishbowl Sales Orders)
+-- ============================================
+CREATE TABLE orders (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  fishbowl_order_number TEXT,
+  
+  -- Customer relationship
+  account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+  customer_name TEXT,
+  customer_id TEXT,
+  
+  -- Order details
+  order_date TIMESTAMPTZ,
+  ship_date TIMESTAMPTZ,
+  status TEXT,
+  
+  -- Financial
+  total_amount DECIMAL(12,2),
+  total_tax DECIMAL(12,2),
+  shipping_cost DECIMAL(12,2),
+  
+  -- Sales rep
+  sales_person TEXT,
+  
+  -- Shipping
+  shipping_street TEXT,
+  shipping_city TEXT,
+  shipping_state TEXT,
+  shipping_zip TEXT,
+  carrier TEXT,
+  tracking_number TEXT,
+  
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  notes TEXT
+);
+
+-- Indexes
+CREATE INDEX idx_orders_account_id ON orders(account_id);
+CREATE INDEX idx_orders_customer_id ON orders(customer_id);
+CREATE INDEX idx_orders_order_date ON orders(order_date);
+CREATE INDEX idx_orders_sales_person ON orders(sales_person);
+CREATE INDEX idx_orders_status ON orders(status);
+
+-- Trigger
+CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- ORDER LINE ITEMS TABLE
+-- ============================================
+CREATE TABLE order_items (
+  id TEXT PRIMARY KEY,
+  order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
+  
+  -- Product details
+  product_id TEXT,
+  product_name TEXT,
+  product_number TEXT,
+  
+  -- Quantities
+  quantity INTEGER,
+  unit_price DECIMAL(12,2),
+  line_total DECIMAL(12,2),
+  
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX idx_order_items_product_id ON order_items(product_id);
+
+-- ============================================
 -- ROW LEVEL SECURITY (For Multi-Tenant SaaS)
 -- Currently disabled - will enable when adding company_id
 -- ============================================
