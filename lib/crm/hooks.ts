@@ -21,6 +21,13 @@ import {
   type PaginatedResult,
 } from './dataService';
 
+// Import Supabase data service for CRM data
+import {
+  loadUnifiedAccountsFromSupabase,
+  getAccountCountsFromSupabase,
+  loadAccountFromSupabase,
+} from './supabaseDataService';
+
 // Query keys for cache management
 export const queryKeys = {
   accounts: ['crm', 'accounts'] as const,
@@ -41,11 +48,11 @@ export function useAccounts(options?: PaginationOptions) {
   });
 }
 
-// Hook for infinite scroll accounts loading
+// Hook for infinite scroll accounts loading (using Supabase)
 export function useInfiniteAccounts(options?: Omit<PaginationOptions, 'offset'>) {
   return useInfiniteQuery({
-    queryKey: [...queryKeys.accounts, 'infinite', options],
-    queryFn: ({ pageParam }) => loadUnifiedAccounts({ ...options, cursor: pageParam }),
+    queryKey: [...queryKeys.accounts, 'infinite', 'supabase', options],
+    queryFn: ({ pageParam }) => loadUnifiedAccountsFromSupabase({ ...options, cursor: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     staleTime: 5 * 60 * 1000,
@@ -53,11 +60,11 @@ export function useInfiniteAccounts(options?: Omit<PaginationOptions, 'offset'>)
   });
 }
 
-// Hook for getting total account counts
+// Hook for getting total account counts (using Supabase)
 export function useAccountCounts() {
   return useQuery({
-    queryKey: ['crm', 'accounts', 'counts'],
-    queryFn: getTotalAccountsCount,
+    queryKey: ['crm', 'accounts', 'counts', 'supabase'],
+    queryFn: getAccountCountsFromSupabase,
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
@@ -119,11 +126,11 @@ export function useAccountSales(accountId: string | null) {
   });
 }
 
-// Hook to get a single account by ID from copper_companies
+// Hook to get a single account by ID (using Supabase)
 export function useAccount(accountId: string | null) {
   return useQuery<UnifiedAccount | null>({
-    queryKey: ['crm', 'account', accountId],
-    queryFn: () => loadAccountFromCopper(accountId || ''),
+    queryKey: ['crm', 'account', 'supabase', accountId],
+    queryFn: () => loadAccountFromSupabase(accountId || ''),
     enabled: !!accountId,
     staleTime: 5 * 60 * 1000,
   });
