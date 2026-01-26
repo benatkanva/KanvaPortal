@@ -20,13 +20,21 @@ export interface SavedFilter {
 
 /**
  * Save a filter to Supabase
- * RLS automatically adds company_id from JWT
+ * Gets company_id from current user's metadata
  */
 export async function saveFilter(
   filter: Omit<SavedFilter, 'id' | 'createdAt' | 'updatedAt'>,
   userId: string
 ): Promise<string> {
   const now = new Date().toISOString();
+  
+  // Get current user to extract company_id from metadata
+  const { data: { user } } = await supabase.auth.getUser();
+  const companyId = user?.user_metadata?.company_id;
+  
+  if (!companyId) {
+    throw new Error('User does not have a company_id. Please contact support.');
+  }
   
   const { data, error } = await supabase
     .from('saved_filters')
@@ -35,6 +43,7 @@ export async function saveFilter(
       is_public: filter.isPublic,
       conditions: filter.conditions,
       user_id: userId,
+      company_id: companyId,
       created_at: now,
       updated_at: now,
       count: filter.count,
