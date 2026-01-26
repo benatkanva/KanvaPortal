@@ -1,5 +1,11 @@
 // CRM Entity Types matching Copper structure
 
+export interface FilterCondition {
+  field: string;
+  operator: 'equals' | 'contains' | 'starts_with' | 'greater_than' | 'less_than' | 'between' | 'in' | 'not_equals' | 'is_empty' | 'is_not_empty';
+  value: any;
+}
+
 export interface Address {
   street?: string;
   city?: string;
