@@ -1,17 +1,18 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 interface UserProfile {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'manager' | 'sales';
-  title?: string; // Job title (e.g., "VP Finance", "Account Executive")
-  salesPerson?: string; // Fishbowl sales person ID
-  canViewAllCommissions?: boolean; // Explicit permission to view all team data
+  role: 'admin' | 'manager' | 'user';
+  company_id?: string;
+  title?: string;
+  salesPerson?: string;
+  canViewAllCommissions?: boolean;
 }
 
 interface AuthContextType {
@@ -20,7 +21,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isManager: boolean;
-  canViewAllCommissions: boolean; // Can view all team member commissions
+  canViewAllCommissions: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -38,62 +39,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Dynamic import to ensure client-side only
-    import('@/lib/firebase/config').then(({ auth, db }) => {
-      if (!auth) {
-        setLoading(false);
-        return;
-      }
-
-      const { onAuthStateChanged } = require('firebase/auth');
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       
-      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
-        setUser(firebaseUser);
+      if (session?.user) {
+        setUser(session.user);
+        
+        // Build user profile from Supabase user metadata
+        const profile: UserProfile = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || session.user.email || '',
+          role: session.user.user_metadata?.role || 'user',
+          company_id: session.user.user_metadata?.company_id,
+          canViewAllCommissions: session.user.user_metadata?.role === 'admin',
+        };
+        
+        setUserProfile(profile);
+      }
+      
+      setLoading(false);
+    };
 
-        if (firebaseUser && db) {
-          try {
-            // Load user profile from Firestore
-            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-            if (userDoc.exists()) {
-              const data = userDoc.data();
-              const profile = {
-                id: firebaseUser.uid,
-                email: firebaseUser.email || '',
-                name: data.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                role: (data.role || 'sales').toLowerCase() as 'admin' | 'manager' | 'sales', // Normalize to lowercase
-              };
-              console.log('✅ User profile loaded:', profile);
-              setUserProfile(profile);
-            } else {
-              // Fallback profile
-              console.warn('⚠️ No user document found, creating fallback profile');
-              setUserProfile({
-                id: firebaseUser.uid,
-                email: firebaseUser.email || '',
-                name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                role: 'sales',
-              });
-            }
-          } catch (error) {
-            console.error('❌ Error loading user profile:', error);
-            setUserProfile(null);
-          }
-        } else {
-          setUserProfile(null);
-        }
+    initAuth();
 
-        setLoading(false);
-      });
-
-      return () => unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        
+        const profile: UserProfile = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || session.user.email || '',
+          role: session.user.user_metadata?.role || 'user',
+          company_id: session.user.user_metadata?.company_id,
+          canViewAllCommissions: session.user.user_metadata?.role === 'admin',
+        };
+        
+        setUserProfile(profile);
+      } else {
+        setUser(null);
+        setUserProfile(null);
+      }
+      
+      setLoading(false);
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const isAdmin = userProfile?.role === 'admin';
   const isManager = userProfile?.role === 'manager' || userProfile?.role === 'admin';
-  
-  // Determine if user can view all commissions
-  // VPs, Admins, or users with explicit permission can view all data
   const canViewAllCommissions = 
     isAdmin || 
     userProfile?.canViewAllCommissions === true ||

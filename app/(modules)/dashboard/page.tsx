@@ -177,71 +177,16 @@ export default function DashboardPage() {
   };
 
   const handleGmailConnect = async () => {
-    if (!user) return;
-    
-    try {
-      const idToken = await user.getIdToken(true);
-      const response = await fetch('/api/gmail/connect', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        window.location.href = data.authUrl;
-      } else {
-        console.error('Failed to initiate Gmail connection');
-      }
-    } catch (error) {
-      console.error('Error connecting Gmail:', error);
-    }
+    // Gmail integration temporarily disabled during Supabase migration
+    console.log('Gmail integration will be re-enabled after full Supabase migration');
   };
 
-  // Check Gmail connection status
+  // Gmail status check disabled during migration
   useEffect(() => {
-    const checkGmailStatus = async () => {
-      if (user) {
-        try {
-          const idToken = await user.getIdToken(true);
-          
-          // Check URL params for connection status
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.get('success') === 'gmail_connected') {
-            setGmailConnected(true);
-            setGmailNeedsReauth(false);
-            setGmailStatus('Successfully connected to Gmail');
-            // Clean up URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-          } else if (urlParams.get('error') === 'gmail_callback_failed') {
-            setGmailConnected(false);
-            setGmailNeedsReauth(true);
-            setGmailStatus('Gmail connection failed - please try again');
-            window.history.replaceState({}, document.title, window.location.pathname);
-          } else {
-            // Check current status from API
-            const response = await fetch('/api/gmail/status', {
-              headers: {
-                'Authorization': `Bearer ${idToken}`,
-              },
-            });
-            
-            if (response.ok) {
-              const statusData = await response.json();
-              setGmailConnected(statusData.connected);
-              setGmailNeedsReauth(statusData.needsReauth);
-              setGmailStatus(statusData.message);
-            }
-          }
-        } catch (error) {
-          console.error('Error checking Gmail status:', error);
-        }
-      }
-    };
-    checkGmailStatus();
-  }, [user]);
+    // Gmail integration temporarily disabled
+    setGmailConnected(false);
+    setGmailStatus('Gmail integration coming soon');
+  }, []);
 
   if (loading) {
     return (
