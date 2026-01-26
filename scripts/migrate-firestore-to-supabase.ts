@@ -3,8 +3,7 @@
  * Migrates all CRM data from Firestore to Supabase PostgreSQL
  */
 
-import { initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { adminDb } from '../lib/firebase/admin';
 import { createClient } from '@supabase/supabase-js';
 import {
   decodeRegion,
@@ -21,17 +20,8 @@ import * as dotenv from 'dotenv';
 // Load environment variables
 dotenv.config({ path: '.env.local' });
 
-// Initialize Firebase Admin
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-  console.error('❌ FIREBASE_SERVICE_ACCOUNT environment variable not set');
-  process.exit(1);
-}
-
-initializeApp({
-  credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
-});
-
-const firestoreDb = getFirestore();
+// Use existing Firebase Admin setup
+const firestoreDb = adminDb;
 
 // Initialize Supabase client with service role key (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
