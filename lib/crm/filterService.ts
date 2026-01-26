@@ -106,13 +106,17 @@ export function buildFilterConstraints(conditions: FilterCondition[]): any[] {
 }
 
 /**
- * Apply client-side filters that Firestore doesn't support natively
+ * Apply ALL filters client-side (Firestore composite index workaround)
+ * This is the standard approach for dynamic filtering in Firestore apps
  */
 export function applyClientSideFilters(
   data: any[],
   conditions: FilterCondition[]
 ): any[] {
+  if (conditions.length === 0) return data;
+  
   return data.filter(item => {
+    // ALL conditions must pass (AND logic)
     for (const condition of conditions) {
       const field = getFilterField(condition.field);
       if (!field) continue;
@@ -120,10 +124,85 @@ export function applyClientSideFilters(
       const fieldValue = item[field.firestoreField];
       const { operator, value } = condition;
 
-      // Handle contains operator (not supported by Firestore)
-      if (operator === 'contains') {
-        if (!fieldValue || typeof fieldValue !== 'string') return false;
-        if (!fieldValue.toLowerCase().includes(value.toLowerCase())) return false;
+      // Handle empty/not empty
+      if (operator === 'is_empty') {
+        if (fieldValue != null && fieldValue !== '') return false;
+        continue;
+      }
+      if (operator === 'is_not_empty') {
+        if (fieldValue == null || fieldValue === '') return false;
+        continue;
+      }
+
+      // Skip if no value for comparison operators
+      if (!value && value !== 0 && value !== false) continue;
+
+      // Type conversion
+      let compareValue: any = value;
+      let itemValue: any = fieldValue;
+      
+      if (field.type === 'number') {
+        compareValue = parseFloat(value);
+        itemValue = parseFloat(fieldValue);
+        if (isNaN(compareValue) || isNaN(itemValue)) continue;
+      } else if (field.type === 'date') {
+        compareValue = new Date(value).getTime();
+        itemValue = fieldValue instanceof Date ? fieldValue.getTime() : 
+                    fieldValue?.toDate ? fieldValue.toDate().getTime() : 
+                    new Date(fieldValue).getTime();
+        if (isNaN(compareValue) || isNaN(itemValue)) continue;
+      } else if (field.type === 'boolean') {
+        compareValue = value === 'true' || value === true;
+        itemValue = fieldValue === true;
+      }
+
+      // Apply operator
+      switch (operator) {
+        case 'equals':
+          if (field.type === 'text') {
+            if (!itemValue || itemValue.toLowerCase() !== compareValue.toLowerCase()) return false;
+          } else {
+            if (itemValue !== compareValue) return false;
+          }
+          break;
+          
+        case 'not_equals':
+          if (field.type === 'text') {
+            if (itemValue && itemValue.toLowerCase() === compareValue.toLowerCase()) return false;
+          } else {
+            if (itemValue === compareValue) return false;
+          }
+          break;
+          
+        case 'contains':
+          if (!itemValue || typeof itemValue !== 'string') return false;
+          if (!itemValue.toLowerCase().includes(compareValue.toLowerCase())) return false;
+          break;
+          
+        case 'starts_with':
+          if (!itemValue || typeof itemValue !== 'string') return false;
+          if (!itemValue.toLowerCase().startsWith(compareValue.toLowerCase())) return false;
+          break;
+          
+        case 'greater_than':
+          if (itemValue <= compareValue) return false;
+          break;
+          
+        case 'less_than':
+          if (itemValue >= compareValue) return false;
+          break;
+          
+        case 'in':
+          // Handle multi-select
+          const values = typeof value === 'string' ? value.split(',').map(v => v.trim()) : [value];
+          if (Array.isArray(itemValue)) {
+            // Field is array, check if any value matches
+            if (!itemValue.some(v => values.includes(v))) return false;
+          } else {
+            // Field is single value
+            if (!values.includes(itemValue)) return false;
+          }
+          break;
       }
     }
     return true;

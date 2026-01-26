@@ -369,25 +369,9 @@ export async function loadUnifiedAccounts(
     }
     
     // Normal browsing - cursor-based pagination for infinite scroll
-    // Build base query constraints
-    const baseConstraints: any[] = [
-      where('cf_712751', '==', true), // Active customers only
-    ];
-    
-    // Add filter conditions if provided
-    if (filterConditions.length > 0) {
-      const filterConstraints = buildFilterConstraints(filterConditions);
-      baseConstraints.push(...filterConstraints);
-      console.log(`🔍 Applying ${filterConditions.length} filter conditions`);
-    }
-    
-    // Add legacy filters if provided
-    if (filters?.salesPerson) {
-      baseConstraints.push(where('Owned By', '==', filters.salesPerson));
-    }
-    
-    // Add ordering
-    baseConstraints.push(orderBy('name'));
+    // NOTE: We only use Firestore for basic active customer filter + ordering
+    // All other filters are applied CLIENT-SIDE to avoid Firestore composite index requirements
+    // This is the standard approach for dynamic filtering in Firestore-based apps
     
     let copperQuery;
     
@@ -400,10 +384,11 @@ export async function loadUnifiedAccounts(
       if (!cursorDoc.empty) {
         const cursorSnapshot = cursorDoc.docs[0];
         
-        // Build query starting after cursor with all constraints
+        // Simple query: active customers only, ordered by name
         copperQuery = query(
           collection(db, 'copper_companies'),
-          ...baseConstraints,
+          where('cf_712751', '==', true),
+          orderBy('name'),
           startAfter(cursorSnapshot),
           limit(pageSize)
         );
@@ -411,7 +396,8 @@ export async function loadUnifiedAccounts(
         // Cursor not found, start from beginning
         copperQuery = query(
           collection(db, 'copper_companies'),
-          ...baseConstraints,
+          where('cf_712751', '==', true),
+          orderBy('name'),
           limit(pageSize)
         );
       }
@@ -419,7 +405,8 @@ export async function loadUnifiedAccounts(
       // First page - no cursor
       copperQuery = query(
         collection(db, 'copper_companies'),
-        ...baseConstraints,
+        where('cf_712751', '==', true),
+        orderBy('name'),
         limit(pageSize)
       );
     }
