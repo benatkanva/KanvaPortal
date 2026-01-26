@@ -18,6 +18,7 @@
     "analyze-data-access": "ts-node --project tsconfig.scripts.json scripts/analyze-data-access.ts",
     "inspect-schema": "ts-node --project tsconfig.scripts.json scripts/inspect-complete-schema.ts",
     "migrate-to-supabase": "tsx scripts/migrate-to-multitenant-supabase.ts",
+    "migrate-fishbowl": "tsx scripts/migrate-fishbowl-data.ts",
     "test-supabase": "tsx scripts/test-supabase-query.ts"
   },
   "dependencies": {

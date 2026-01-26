@@ -226,12 +226,11 @@ async function migrateFishbowlSOItems() {
       order_id: orderId,
       product_id: data.productId || null,
       product_name: data.productName || data.description || null,
-      sku: data.productNum || data.sku || null,
-      quantity: parseFloat(data.qtyToFulfill || data.quantity || 0),
+      product_number: data.productNum || data.sku || null,
+      quantity: Math.round(parseFloat(data.qtyToFulfill || data.quantity || 0)),
       unit_price: parseFloat(data.unitPrice || data.price || 0),
-      total_price: parseFloat(data.totalPrice || 0),
+      line_total: parseFloat(data.totalPrice || 0),
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     };
     
     itemsToInsert.push(item);
