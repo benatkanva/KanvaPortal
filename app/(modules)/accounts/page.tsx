@@ -10,7 +10,7 @@ import { MergeAccountsDialog } from '@/components/crm/MergeAccountsDialog';
 import { SavedFiltersPanel } from '@/components/crm/SavedFiltersPanel';
 import { FilterSidebar, type FilterCondition } from '@/components/crm/FilterSidebar';
 import type { UnifiedAccount } from '@/lib/crm/dataService';
-import { saveFilter, loadFilters, type SavedFilter } from '@/lib/crm/filterService';
+import { saveFilter, loadFilters, type SavedFilter } from '@/lib/crm/supabaseFilterService';
 import { 
   Plus,
   Search,
