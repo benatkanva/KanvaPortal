@@ -40,6 +40,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Track account name to ID mapping
 const accountNameToId = new Map<string, string>();
+// Track order number to document ID mapping
+const orderNumberToId = new Map<string, string>();
 
 /**
  * Step 1: Load existing accounts and create name mapping
@@ -58,8 +60,8 @@ async function loadAccountMapping() {
   }
 
   accounts?.forEach((account) => {
-    // Map by name (case-insensitive)
-    const normalizedName = account.name.toLowerCase().trim();
+    // Map by name (case-insensitive, normalized)
+    const normalizedName = account.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
     accountNameToId.set(normalizedName, account.id);
   });
 
@@ -91,8 +93,8 @@ async function migrateFishbowlCustomers() {
       continue;
     }
     
-    // Find matching account
-    const normalizedName = customerName.toLowerCase().trim();
+    // Find matching account - use same normalization as loading
+    const normalizedName = customerName.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
     const accountId = accountNameToId.get(normalizedName);
     
     if (accountId) {
@@ -109,15 +111,17 @@ async function migrateFishbowlCustomers() {
       }
     } else {
       notFound++;
-      notFoundList.push(customerName);
+      if (notFoundList.length < 20) {
+        notFoundList.push(customerName);
+      }
     }
   }
   
   console.log(`✅ Updated ${updated} accounts with fishbowl_id`);
   console.log(`⚠️  ${notFound} customers not found in accounts`);
   
-  if (notFoundList.length > 0 && notFoundList.length <= 20) {
-    console.log('Not found customers:', notFoundList);
+  if (notFoundList.length > 0) {
+    console.log('Sample not found customers:', notFoundList);
   }
 }
 
@@ -139,14 +143,16 @@ async function migrateFishbowlSalesOrders() {
     
     // Find matching account by customer name
     const customerName = data.customerName || data.CustomerName;
-    const normalizedName = customerName?.toLowerCase().trim();
+    const normalizedName = customerName ? customerName.toLowerCase().trim().replace(/[^a-z0-9]/g, '') : null;
     const accountId = normalizedName ? accountNameToId.get(normalizedName) : null;
+    
+    const orderNumber = data.num || data.orderNumber || doc.id;
     
     const order = {
       id: doc.id,
       company_id: COMPANY_ID,
       source: 'fishbowl',
-      fishbowl_order_number: data.num || data.orderNumber || doc.id,
+      fishbowl_order_number: orderNumber,
       account_id: accountId || null,
       customer_name: customerName || null,
       customer_id: data.customerId || null,
@@ -167,6 +173,9 @@ async function migrateFishbowlSalesOrders() {
       created_at: data.dateCreated || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+    
+    // Track mapping of order number to document ID for order items
+    orderNumberToId.set(String(orderNumber), doc.id);
     
     ordersToInsert.push(order);
     
@@ -212,10 +221,19 @@ async function migrateFishbowlSOItems() {
   for (const doc of snapshot.docs) {
     const data = doc.data();
     
-    // Get order ID from salesOrderId or extract from document path
-    const orderId = data.salesOrderId || data.soId;
+    // Get order NUMBER from the item data (this is the fishbowl order number, not doc ID)
+    const orderNumber = data.soNum || data.salesOrderNumber || data.salesOrderId || data.soId;
     
-    if (!orderId) {
+    if (!orderNumber) {
+      skipped++;
+      continue;
+    }
+    
+    // Map order number to the actual order document ID
+    const actualOrderId = orderNumberToId.get(String(orderNumber));
+    
+    if (!actualOrderId) {
+      // Order doesn't exist in our orders table, skip this item
       skipped++;
       continue;
     }
@@ -223,7 +241,7 @@ async function migrateFishbowlSOItems() {
     const item = {
       id: doc.id,
       company_id: COMPANY_ID,
-      order_id: orderId,
+      order_id: actualOrderId,  // Use the mapped document ID, not the order number
       product_id: data.productId || null,
       product_name: data.productName || data.description || null,
       product_number: data.productNum || data.sku || null,
