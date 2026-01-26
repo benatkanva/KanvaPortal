@@ -18,14 +18,17 @@ export default function UserMenu({ query = '' }: UserMenuProps) {
 
   const handleSignOut = async () => {
     try {
-      const { auth } = await import('@/lib/firebase/config');
-      const { signOut } = await import('firebase/auth');
-      if (auth) {
-        await signOut(auth);
-        toast.success('Signed out successfully');
-        window.location.href = '/';
+      const { supabase } = await import('@/lib/supabase/client');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
       }
+      
+      toast.success('Signed out successfully');
+      window.location.href = '/login';
     } catch (error) {
+      console.error('Sign out error:', error);
       toast.error('Failed to sign out');
     }
   };
@@ -49,9 +52,9 @@ export default function UserMenu({ query = '' }: UserMenuProps) {
 
   if (!user) return null;
 
-  const userPhotoURL = user.photoURL;
-  const userName = userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User';
-  const userRole = isAdmin ? 'Admin' : userProfile?.role || 'Sales Rep';
+  const userPhotoURL = user.user_metadata?.avatar_url;
+  const userName = userProfile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+  const userRole = isAdmin ? 'Admin' : userProfile?.role || 'User';
 
   return (
     <div className="relative" ref={menuRef}>

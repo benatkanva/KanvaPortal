@@ -13,8 +13,8 @@ import {
   Upload,
   MapPin
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { signOut } from '@/lib/firebase/client';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -48,15 +48,18 @@ function SearchParamsProvider({ onQueryChange }: { onQueryChange: (query: string
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, userData, isAdmin } = useAuth();
+  const { user, userProfile, isAdmin } = useAuth();
   const [query, setQuery] = useState('');
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
       toast.success('Signed out successfully');
       router.push('/login');
     } catch (error) {
+      console.error('Sign out error:', error);
       toast.error('Failed to sign out');
     }
   };
@@ -121,10 +124,10 @@ export default function AppShell({ children }: AppShellProps) {
                 <div className="ml-4 pl-4 border-l border-gray-200 flex items-center gap-3">
                   <div className="text-right hidden sm:block">
                     <p className="text-sm font-medium text-gray-900">
-                      {userData?.name || user.email?.split('@')[0]}
+                      {userProfile?.name || user?.email?.split('@')[0]}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {isAdmin ? 'Admin' : 'Sales Rep'}
+                      {isAdmin ? 'Admin' : userProfile?.role || 'User'}
                     </p>
                   </div>
                   <button
