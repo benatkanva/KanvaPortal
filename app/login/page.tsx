@@ -85,8 +85,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+    <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden flex items-center justify-center p-4">
+      {/* Background glow effects */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#93D500]/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#17351A]/30 rounded-full blur-3xl"></div>
+      
+      <div className="bg-[#17351A]/40 backdrop-blur-xl rounded-2xl border border-[#93D500]/20 shadow-[0_0_50px_rgba(147,213,0,0.1)] w-full max-w-md p-8 relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
@@ -95,24 +99,24 @@ export default function LoginPage() {
               alt="Kanva Botanicals"
               width={200}
               height={80}
-              className="object-contain"
+              className="object-contain drop-shadow-[0_0_30px_rgba(147,213,0,0.4)]"
               priority
               style={{ width: 'auto', height: 'auto' }}
             />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            KanvaPortal
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Welcome Back
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-400">
             Sign in to access your portal
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800">{error}</p>
+          <div className="mb-6 p-4 bg-red-900/20 border border-red-500/50 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-200">{error}</p>
           </div>
         )}
 
@@ -120,7 +124,7 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          className="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-900 font-semibold py-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-3 shadow-sm"
+          className="w-full bg-white hover:bg-gray-100 text-gray-800 font-semibold py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:scale-[1.02]"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -145,10 +149,10 @@ export default function LoginPage() {
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-gray-600/50"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-gray-500">or</span>
+            <span className="px-4 bg-transparent text-gray-500">or</span>
           </div>
         </div>
 
@@ -156,11 +160,11 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-6">
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
               Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 id="email"
                 type="email"
@@ -168,18 +172,18 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ben@kanvabotanicals.com"
                 required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 bg-black/30 border border-gray-600/50 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[#93D500] focus:border-transparent transition-all"
               />
             </div>
           </div>
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 id="password"
                 type="password"
@@ -187,7 +191,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 bg-black/30 border border-gray-600/50 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[#93D500] focus:border-transparent transition-all"
               />
             </div>
           </div>
@@ -196,7 +200,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+            className="w-full bg-[#93D500] hover:bg-[#a4e600] disabled:bg-gray-600 text-black font-bold py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(147,213,0,0.3)] hover:shadow-[0_0_30px_rgba(147,213,0,0.5)] hover:scale-[1.02]"
           >
             {loading ? (
               <>
@@ -209,17 +213,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Footer */}
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p>Multi-tenant SaaS with Row Level Security</p>
-          <p className="mt-1">Powered by Supabase + Next.js</p>
-        </div>
-
         {/* Domain Notice */}
-        <div className="mt-6 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-xs text-green-800 text-center">
-            Authorized for @kanvabotanicals.com and @cwlbrands.com
-          </p>
+        <div className="mt-6 text-center text-sm text-gray-500">
+          Authorized for <span className="text-[#93D500]">@kanvabotanicals.com</span> and <span className="text-[#93D500]">@cwlbrands.com</span>
         </div>
       </div>
     </div>

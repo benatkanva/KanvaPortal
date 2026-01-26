@@ -50,19 +50,21 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden">
+      {/* Background glow effects - matches login page */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#93D500]/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#17351A]/30 rounded-full blur-3xl"></div>
+      
       <div className="text-center relative z-10">
         <Image 
           src="/images/kanva_logo_rotate.gif" 
           alt="Loading..." 
           width={64}
           height={64}
-          className="mx-auto mb-4"
+          className="mx-auto mb-4 drop-shadow-[0_0_30px_rgba(147,213,0,0.4)]"
           priority
           unoptimized
         />
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400 text-lg">Loading...</p>
       </div>
     </div>
   );
