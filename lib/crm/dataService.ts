@@ -40,6 +40,8 @@ import {
   decodeAccountOpportunity,
   decodeOrderFrequency,
 } from './customFields';
+import { buildFilterConstraints, applyClientSideFilters } from './filterService';
+import type { FilterCondition } from '@/components/crm/FilterSidebar';
 
 // ============== ID Generation ==============
 // Generates IDs in the same format as Copper (numeric)
@@ -272,12 +274,12 @@ export interface SalesSummary {
 export interface PaginationOptions {
   pageSize?: number;
   offset?: number;
-  cursor?: string; // Document ID for cursor-based pagination
+  cursor?: string;
   searchTerm?: string;
+  filterConditions?: FilterCondition[];
   filters?: {
-    status?: string;
-    source?: string;
     salesPerson?: string;
+    [key: string]: any;
   };
 }
 
@@ -322,12 +324,12 @@ export async function getTotalAccountsCount(): Promise<{
 
 /**
  * Load accounts with cursor-based pagination from copper_companies
- * Supports infinite scroll and full-database search
+ * Supports infinite scroll, full-database search, and advanced filtering
  */
 export async function loadUnifiedAccounts(
   options: PaginationOptions = {}
 ): Promise<PaginatedResult<UnifiedAccount>> {
-  const { pageSize = 50, cursor, searchTerm, filters } = options;
+  const { pageSize = 50, cursor, searchTerm, filterConditions = [], filters } = options;
   const accounts: UnifiedAccount[] = [];
   let nextCursor: string | undefined = undefined;
   
@@ -367,6 +369,26 @@ export async function loadUnifiedAccounts(
     }
     
     // Normal browsing - cursor-based pagination for infinite scroll
+    // Build base query constraints
+    const baseConstraints: any[] = [
+      where('cf_712751', '==', true), // Active customers only
+    ];
+    
+    // Add filter conditions if provided
+    if (filterConditions.length > 0) {
+      const filterConstraints = buildFilterConstraints(filterConditions);
+      baseConstraints.push(...filterConstraints);
+      console.log(`🔍 Applying ${filterConditions.length} filter conditions`);
+    }
+    
+    // Add legacy filters if provided
+    if (filters?.salesPerson) {
+      baseConstraints.push(where('Owned By', '==', filters.salesPerson));
+    }
+    
+    // Add ordering
+    baseConstraints.push(orderBy('name'));
+    
     let copperQuery;
     
     if (cursor) {
@@ -378,52 +400,28 @@ export async function loadUnifiedAccounts(
       if (!cursorDoc.empty) {
         const cursorSnapshot = cursorDoc.docs[0];
         
-        // Build query starting after cursor
-        if (filters?.salesPerson) {
-          copperQuery = query(
-            collection(db, 'copper_companies'),
-            where('cf_712751', '==', true),
-            where('Owned By', '==', filters.salesPerson),
-            orderBy('name'),
-            startAfter(cursorSnapshot),
-            limit(pageSize)
-          );
-        } else {
-          copperQuery = query(
-            collection(db, 'copper_companies'),
-            where('cf_712751', '==', true),
-            orderBy('name'),
-            startAfter(cursorSnapshot),
-            limit(pageSize)
-          );
-        }
+        // Build query starting after cursor with all constraints
+        copperQuery = query(
+          collection(db, 'copper_companies'),
+          ...baseConstraints,
+          startAfter(cursorSnapshot),
+          limit(pageSize)
+        );
       } else {
         // Cursor not found, start from beginning
         copperQuery = query(
           collection(db, 'copper_companies'),
-          where('cf_712751', '==', true),
-          orderBy('name'),
+          ...baseConstraints,
           limit(pageSize)
         );
       }
     } else {
       // First page - no cursor
-      if (filters?.salesPerson) {
-        copperQuery = query(
-          collection(db, 'copper_companies'),
-          where('cf_712751', '==', true),
-          where('Owned By', '==', filters.salesPerson),
-          orderBy('name'),
-          limit(pageSize)
-        );
-      } else {
-        copperQuery = query(
-          collection(db, 'copper_companies'),
-          where('cf_712751', '==', true),
-          orderBy('name'),
-          limit(pageSize)
-        );
-      }
+      copperQuery = query(
+        collection(db, 'copper_companies'),
+        ...baseConstraints,
+        limit(pageSize)
+      );
     }
     
     // Execute query
@@ -436,16 +434,23 @@ export async function loadUnifiedAccounts(
       accounts.push(account);
     });
     
+    // Apply client-side filters for operators Firestore doesn't support
+    let filteredAccounts = accounts;
+    if (filterConditions.length > 0) {
+      filteredAccounts = applyClientSideFilters(accounts, filterConditions);
+      console.log(`✅ Filtered ${accounts.length} → ${filteredAccounts.length} accounts`);
+    }
+    
     // Set next cursor to last document ID
-    if (accounts.length >= pageSize && copperSnapshot.docs.length > 0) {
+    if (filteredAccounts.length >= pageSize && copperSnapshot.docs.length > 0) {
       nextCursor = copperSnapshot.docs[copperSnapshot.docs.length - 1].id;
     }
     
-    console.log(`📄 Loaded ${accounts.length} accounts (cursor: ${cursor || 'start'}, next: ${nextCursor || 'end'})`);
+    console.log(`📄 Loaded ${filteredAccounts.length} accounts (cursor: ${cursor || 'start'}, next: ${nextCursor || 'end'})`);
     
     return {
-      data: accounts,
-      total: accounts.length,
+      data: filteredAccounts,
+      total: filteredAccounts.length,
       hasMore: !!nextCursor,
       nextCursor,
     };

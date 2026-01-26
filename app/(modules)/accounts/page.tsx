@@ -61,7 +61,10 @@ export default function AccountsPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
-  } = useInfiniteAccounts({ pageSize: 50 });
+  } = useInfiniteAccounts({ 
+    pageSize: 50,
+    filterConditions: activeFilterConditions 
+  });
   const { data: counts } = useAccountCounts();
   const { refreshAccounts } = useRefreshCRMData();
   
