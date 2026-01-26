@@ -530,6 +530,283 @@ export default function AccountsPage() {
           );
         },
       },
+      {
+        id: 'fishbowlId',
+        accessorKey: 'fishbowlId',
+        header: 'Fishbowl ID',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'copperId',
+        accessorKey: 'copperId',
+        header: 'Copper ID',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'isActiveCustomer',
+        accessorKey: 'isActiveCustomer',
+        header: 'Active Customer',
+        cell: ({ getValue }) => {
+          const isActive = getValue() as boolean;
+          return (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+              isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {isActive ? 'Yes' : 'No'}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'website',
+        accessorKey: 'website',
+        header: 'Website',
+        cell: ({ getValue }) => {
+          const website = getValue() as string;
+          return website ? (
+            <a href={website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm truncate max-w-[200px] block">
+              {website}
+            </a>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'shippingStreet',
+        accessorKey: 'shippingStreet',
+        header: 'Shipping Street',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'shippingZip',
+        accessorKey: 'shippingZip',
+        header: 'Shipping Zip',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'billingStreet',
+        accessorKey: 'billingStreet',
+        header: 'Billing Street',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'billingCity',
+        accessorKey: 'billingCity',
+        header: 'Billing City',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'billingState',
+        accessorKey: 'billingState',
+        header: 'Billing State',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'billingZip',
+        accessorKey: 'billingZip',
+        header: 'Billing Zip',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'shippingTerms',
+        accessorKey: 'shippingTerms',
+        header: 'Shipping Terms',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'carrierName',
+        accessorKey: 'carrierName',
+        header: 'Carrier',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'lastOrderDate',
+        accessorKey: 'lastOrderDate',
+        header: 'Last Order Date',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'firstOrderDate',
+        accessorKey: 'firstOrderDate',
+        header: 'First Order Date',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'primaryContactName',
+        accessorKey: 'primaryContactName',
+        header: 'Primary Contact',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'primaryContactEmail',
+        accessorKey: 'primaryContactEmail',
+        header: 'Contact Email',
+        cell: ({ getValue }) => {
+          const email = getValue() as string;
+          return email ? (
+            <a href={`mailto:${email}`} className="text-blue-600 hover:underline text-sm truncate max-w-[200px] block">
+              {email}
+            </a>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'primaryContactPhone',
+        accessorKey: 'primaryContactPhone',
+        header: 'Contact Phone',
+        cell: ({ getValue }) => {
+          const phone = getValue() as string;
+          return phone ? (
+            <a href={`tel:${phone}`} className="text-gray-600 hover:text-[#93D500] text-sm">
+              {phone}
+            </a>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'organizationLevel',
+        accessorKey: 'organizationLevel',
+        header: 'Organization Level',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'businessModel',
+        accessorKey: 'businessModel',
+        header: 'Business Model',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'copperUrl',
+        accessorKey: 'copperUrl',
+        header: 'Copper URL',
+        cell: ({ getValue }) => {
+          const url = getValue() as string;
+          return url ? (
+            <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
+              View in Copper
+            </a>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'contactType',
+        accessorKey: 'contactType',
+        header: 'Contact Type',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'inactiveDays',
+        accessorKey: 'inactiveDays',
+        header: 'Inactive Days',
+        cell: ({ getValue }) => {
+          const days = getValue() as number;
+          return days !== undefined ? (
+            <span className="text-gray-600">{days}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'interactionCount',
+        accessorKey: 'interactionCount',
+        header: 'Interactions',
+        cell: ({ getValue }) => {
+          const count = getValue() as number;
+          return count !== undefined ? (
+            <span className="text-gray-600">{count}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'lastContacted',
+        accessorKey: 'lastContacted',
+        header: 'Last Contacted',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'ownedBy',
+        accessorKey: 'ownedBy',
+        header: 'Owned By',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'createdAt',
+        accessorKey: 'createdAt',
+        header: 'Created Date',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'updatedAt',
+        accessorKey: 'updatedAt',
+        header: 'Updated Date',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'notes',
+        accessorKey: 'notes',
+        header: 'Notes',
+        cell: ({ getValue }) => {
+          const notes = getValue() as string;
+          return notes ? (
+            <span className="text-gray-600 text-sm truncate max-w-[300px] block" title={notes}>
+              {notes}
+            </span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
     ],
     [allSelected, someSelected, toggleSelectAll, selectedAccountIds, toggleSelectAccount, router]
   );
