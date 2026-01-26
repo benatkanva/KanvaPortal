@@ -1,6 +1,6 @@
 /**
  * Complete field definitions for CRM filtering
- * Maps all copper_companies fields to filterable UI fields
+ * Uses EXACT Supabase column names (snake_case) and data types
  */
 
 import {
@@ -13,23 +13,21 @@ import {
   CARRIER_OPTIONS,
   BUSINESS_MODEL_OPTIONS,
   ORGANIZATION_LEVEL_OPTIONS,
-  ACCOUNT_OPPORTUNITY_OPTIONS,
-  ORDER_FREQUENCY_OPTIONS,
   STATE_OPTIONS,
 } from './customFields';
 
 export interface FilterFieldOption {
-  value: string;
+  value: string | boolean;
   label: string;
 }
 
 export interface FilterField {
-  id: string; // Firestore field name
+  id: string; // Supabase column name (snake_case)
   label: string; // Display name
   type: 'text' | 'select' | 'multiselect' | 'date' | 'number' | 'boolean';
   category: 'interactions' | 'details' | 'identifiers' | 'financial' | 'system';
   options?: FilterFieldOption[];
-  firestoreField: string; // Actual Firestore field path
+  supabaseColumn: string; // Actual Supabase column name
 }
 
 // Convert custom field options to filter options
@@ -40,39 +38,46 @@ const toFilterOptions = (options: Array<{ id: number; name: string }>): FilterFi
 export const ACCOUNT_FILTER_FIELDS: FilterField[] = [
   // INTERACTIONS
   {
-    id: 'dateCreated',
-    label: 'Date Added',
+    id: 'created_at',
+    label: 'Created Date',
     type: 'date',
     category: 'interactions',
-    firestoreField: 'dateCreated'
+    supabaseColumn: 'created_at'
   },
   {
-    id: 'dateModified',
-    label: 'Last Modified',
+    id: 'updated_at',
+    label: 'Updated Date',
     type: 'date',
     category: 'interactions',
-    firestoreField: 'dateModified'
+    supabaseColumn: 'updated_at'
   },
   {
-    id: 'lastOrderDate',
+    id: 'last_order_date',
     label: 'Last Order Date',
     type: 'date',
     category: 'interactions',
-    firestoreField: 'lastOrderDate'
+    supabaseColumn: 'last_order_date'
   },
   {
-    id: 'firstOrderDate',
+    id: 'first_order_date',
     label: 'First Order Date',
     type: 'date',
     category: 'interactions',
-    firestoreField: 'firstOrderDate'
+    supabaseColumn: 'first_order_date'
   },
   {
-    id: 'salesPerson',
+    id: 'last_contacted',
+    label: 'Last Contacted',
+    type: 'date',
+    category: 'interactions',
+    supabaseColumn: 'last_contacted'
+  },
+  {
+    id: 'sales_person',
     label: 'Sales Person',
     type: 'text',
     category: 'interactions',
-    firestoreField: 'salesPerson'
+    supabaseColumn: 'sales_person'
   },
 
   // DETAILS
@@ -81,159 +86,163 @@ export const ACCOUNT_FILTER_FIELDS: FilterField[] = [
     label: 'Account Name',
     type: 'text',
     category: 'details',
-    firestoreField: 'name'
+    supabaseColumn: 'name'
   },
   {
     id: 'email',
     label: 'Email',
     type: 'text',
     category: 'details',
-    firestoreField: 'email'
+    supabaseColumn: 'email'
   },
   {
     id: 'phone',
     label: 'Phone',
     type: 'text',
     category: 'details',
-    firestoreField: 'phone'
+    supabaseColumn: 'phone'
   },
   {
     id: 'website',
     label: 'Website',
     type: 'text',
     category: 'details',
-    firestoreField: 'website'
+    supabaseColumn: 'website'
   },
   {
-    id: 'shippingCity',
-    label: 'City',
+    id: 'shipping_city',
+    label: 'Shipping City',
     type: 'text',
     category: 'details',
-    firestoreField: 'shippingCity'
+    supabaseColumn: 'shipping_city'
   },
   {
-    id: 'shippingState',
-    label: 'State',
+    id: 'shipping_state',
+    label: 'Shipping State',
     type: 'select',
     category: 'details',
     options: toFilterOptions(STATE_OPTIONS),
-    firestoreField: 'shippingState'
+    supabaseColumn: 'shipping_state'
   },
   {
-    id: 'shippingZip',
-    label: 'Zip Code',
+    id: 'shipping_zip',
+    label: 'Shipping Zip',
     type: 'text',
     category: 'details',
-    firestoreField: 'shippingZip'
+    supabaseColumn: 'shipping_zip'
   },
   {
-    id: 'shippingStreet',
+    id: 'shipping_street',
     label: 'Shipping Street',
     type: 'text',
     category: 'details',
-    firestoreField: 'shippingStreet'
+    supabaseColumn: 'shipping_street'
   },
   {
-    id: 'billingStreet',
+    id: 'billing_street',
     label: 'Billing Street',
     type: 'text',
     category: 'details',
-    firestoreField: 'billingStreet'
+    supabaseColumn: 'billing_street'
   },
   {
-    id: 'billingCity',
+    id: 'billing_city',
     label: 'Billing City',
     type: 'text',
     category: 'details',
-    firestoreField: 'billingCity'
+    supabaseColumn: 'billing_city'
   },
   {
-    id: 'billingState',
+    id: 'billing_state',
     label: 'Billing State',
     type: 'select',
     category: 'details',
     options: toFilterOptions(STATE_OPTIONS),
-    firestoreField: 'billingState'
+    supabaseColumn: 'billing_state'
   },
   {
-    id: 'billingZip',
+    id: 'billing_zip',
     label: 'Billing Zip',
     type: 'text',
     category: 'details',
-    firestoreField: 'billingZip'
+    supabaseColumn: 'billing_zip'
   },
   {
-    id: 'primaryContactName',
+    id: 'primary_contact_name',
     label: 'Primary Contact Name',
     type: 'text',
     category: 'details',
-    firestoreField: 'primaryContactName'
+    supabaseColumn: 'primary_contact_name'
   },
   {
-    id: 'primaryContactEmail',
+    id: 'primary_contact_email',
     label: 'Primary Contact Email',
     type: 'text',
     category: 'details',
-    firestoreField: 'primaryContactEmail'
+    supabaseColumn: 'primary_contact_email'
   },
   {
-    id: 'primaryContactPhone',
+    id: 'primary_contact_phone',
     label: 'Primary Contact Phone',
     type: 'text',
     category: 'details',
-    firestoreField: 'primaryContactPhone'
+    supabaseColumn: 'primary_contact_phone'
   },
   {
     id: 'notes',
     label: 'Notes',
     type: 'text',
     category: 'details',
-    firestoreField: 'notes'
+    supabaseColumn: 'notes'
   },
 
   // IDENTIFIERS
   {
-    id: 'accountNumber',
+    id: 'account_number',
     label: 'Account Number',
     type: 'text',
     category: 'identifiers',
-    firestoreField: 'accountNumber'
+    supabaseColumn: 'account_number'
   },
   {
-    id: 'fishbowlId',
+    id: 'fishbowl_id',
     label: 'Fishbowl ID',
     type: 'text',
     category: 'identifiers',
-    firestoreField: 'fishbowlId'
+    supabaseColumn: 'fishbowl_id'
   },
   {
-    id: 'copperId',
+    id: 'copper_id',
     label: 'Copper ID',
     type: 'number',
     category: 'identifiers',
-    firestoreField: 'copperId'
+    supabaseColumn: 'copper_id'
   },
   {
-    id: 'accountOrderId',
+    id: 'account_order_id',
     label: 'Account Order ID',
     type: 'text',
     category: 'identifiers',
-    firestoreField: 'accountOrderId'
+    supabaseColumn: 'account_order_id'
   },
   {
-    id: 'isActiveCustomer',
+    id: 'is_active_customer',
     label: 'Is Active Customer',
     type: 'boolean',
     category: 'identifiers',
-    firestoreField: 'isActiveCustomer'
+    options: [
+      { value: true, label: 'Yes' },
+      { value: false, label: 'No' },
+    ],
+    supabaseColumn: 'is_active_customer'
   },
   {
-    id: 'accountType',
+    id: 'account_type',
     label: 'Account Type',
     type: 'multiselect',
     category: 'identifiers',
     options: toFilterOptions(ACCOUNT_TYPE_OPTIONS),
-    firestoreField: 'accountType'
+    supabaseColumn: 'account_type'
   },
   {
     id: 'status',
@@ -243,8 +252,10 @@ export const ACCOUNT_FILTER_FIELDS: FilterField[] = [
     options: [
       { value: 'active', label: 'Active' },
       { value: 'inactive', label: 'Inactive' },
+      { value: 'prospect', label: 'Prospect' },
+      { value: 'customer', label: 'Customer' },
     ],
-    firestoreField: 'status'
+    supabaseColumn: 'status'
   },
   {
     id: 'region',
@@ -252,7 +263,7 @@ export const ACCOUNT_FILTER_FIELDS: FilterField[] = [
     type: 'select',
     category: 'identifiers',
     options: toFilterOptions(REGION_OPTIONS),
-    firestoreField: 'region'
+    supabaseColumn: 'region'
   },
   {
     id: 'segment',
@@ -260,103 +271,73 @@ export const ACCOUNT_FILTER_FIELDS: FilterField[] = [
     type: 'select',
     category: 'identifiers',
     options: toFilterOptions(SEGMENT_OPTIONS),
-    firestoreField: 'segment'
+    supabaseColumn: 'segment'
   },
   {
-    id: 'customerPriority',
+    id: 'customer_priority',
     label: 'Customer Priority',
     type: 'select',
     category: 'identifiers',
     options: toFilterOptions(CUSTOMER_PRIORITY_OPTIONS),
-    firestoreField: 'customerPriority'
+    supabaseColumn: 'customer_priority'
   },
   {
-    id: 'organizationLevel',
+    id: 'organization_level',
     label: 'Organization Level',
     type: 'select',
     category: 'identifiers',
     options: toFilterOptions(ORGANIZATION_LEVEL_OPTIONS),
-    firestoreField: 'organizationLevel'
+    supabaseColumn: 'organization_level'
   },
   {
-    id: 'businessModel',
+    id: 'business_model',
     label: 'Business Model',
     type: 'select',
     category: 'identifiers',
     options: toFilterOptions(BUSINESS_MODEL_OPTIONS),
-    firestoreField: 'businessModel'
+    supabaseColumn: 'business_model'
   },
 
   // FINANCIAL
   {
-    id: 'totalSpent',
+    id: 'total_spent',
     label: 'Total Spent',
     type: 'number',
     category: 'financial',
-    firestoreField: 'totalSpent'
+    supabaseColumn: 'total_spent'
   },
   {
-    id: 'totalOrders',
+    id: 'total_orders',
     label: 'Total Orders',
     type: 'number',
     category: 'financial',
-    firestoreField: 'totalOrders'
+    supabaseColumn: 'total_orders'
   },
   {
-    id: 'averageOrderValue',
-    label: 'Average Order Value',
-    type: 'number',
-    category: 'financial',
-    firestoreField: 'averageOrderValue'
-  },
-  {
-    id: 'creditLimit',
-    label: 'Credit Limit',
-    type: 'number',
-    category: 'financial',
-    firestoreField: 'creditLimit'
-  },
-  {
-    id: 'paymentTerms',
+    id: 'payment_terms',
     label: 'Payment Terms',
     type: 'select',
     category: 'financial',
     options: toFilterOptions(PAYMENT_TERMS_OPTIONS),
-    firestoreField: 'paymentTerms'
-  },
-  {
-    id: 'accountOpportunity',
-    label: 'Account Opportunity',
-    type: 'select',
-    category: 'financial',
-    options: toFilterOptions(ACCOUNT_OPPORTUNITY_OPTIONS),
-    firestoreField: 'accountOpportunity'
+    supabaseColumn: 'payment_terms'
   },
 
   // SYSTEM
   {
-    id: 'shippingTerms',
+    id: 'shipping_terms',
     label: 'Shipping Terms',
     type: 'select',
     category: 'system',
     options: toFilterOptions(SHIPPING_TERMS_OPTIONS),
-    firestoreField: 'shippingTerms'
+    supabaseColumn: 'shipping_terms'
   },
   {
-    id: 'carrierName',
+    id: 'carrier_name',
     label: 'Carrier',
     type: 'select',
     category: 'system',
     options: toFilterOptions(CARRIER_OPTIONS),
-    firestoreField: 'carrierName'
-  },
-  {
-    id: 'orderFrequency',
-    label: 'Order Frequency',
-    type: 'select',
-    category: 'system',
-    options: toFilterOptions(ORDER_FREQUENCY_OPTIONS),
-    firestoreField: 'orderFrequency'
+    supabaseColumn: 'carrier_name'
   },
   {
     id: 'source',
@@ -368,63 +349,49 @@ export const ACCOUNT_FILTER_FIELDS: FilterField[] = [
       { value: 'copper', label: 'Copper' },
       { value: 'manual', label: 'Manual' },
     ],
-    firestoreField: 'source'
+    supabaseColumn: 'source'
   },
   {
-    id: 'copperUrl',
+    id: 'copper_url',
     label: 'Copper URL',
     type: 'text',
     category: 'system',
-    firestoreField: 'copperUrl'
+    supabaseColumn: 'copper_url'
   },
   {
-    id: 'contactType',
+    id: 'contact_type',
     label: 'Contact Type',
     type: 'text',
     category: 'system',
-    firestoreField: 'contactType'
+    supabaseColumn: 'contact_type'
   },
   {
-    id: 'inactiveDays',
+    id: 'inactive_days',
     label: 'Inactive Days',
     type: 'number',
     category: 'system',
-    firestoreField: 'inactiveDays'
+    supabaseColumn: 'inactive_days'
   },
   {
-    id: 'interactionCount',
+    id: 'interaction_count',
     label: 'Interaction Count',
     type: 'number',
     category: 'system',
-    firestoreField: 'interactionCount'
+    supabaseColumn: 'interaction_count'
   },
   {
-    id: 'lastContacted',
-    label: 'Last Contacted',
-    type: 'date',
-    category: 'system',
-    firestoreField: 'lastContacted'
-  },
-  {
-    id: 'ownedBy',
+    id: 'owned_by',
     label: 'Owned By',
     type: 'text',
     category: 'system',
-    firestoreField: 'ownedBy'
+    supabaseColumn: 'owned_by'
   },
   {
-    id: 'createdAt',
-    label: 'Created At',
-    type: 'date',
+    id: 'owner_id',
+    label: 'Owner ID',
+    type: 'number',
     category: 'system',
-    firestoreField: 'createdAt'
-  },
-  {
-    id: 'updatedAt',
-    label: 'Updated At',
-    type: 'date',
-    category: 'system',
-    firestoreField: 'updatedAt'
+    supabaseColumn: 'owner_id'
   },
 ];
 
