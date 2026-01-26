@@ -90,24 +90,24 @@ export default function LoginPage() {
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#93D500]/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#17351A]/30 rounded-full blur-3xl"></div>
       
-      <div className="bg-[#17351A]/40 backdrop-blur-xl rounded-2xl border border-[#93D500]/20 shadow-[0_0_50px_rgba(147,213,0,0.1)] w-full max-w-md p-8 relative z-10">
+      <div className="bg-[#17351A]/50 backdrop-blur-xl rounded-2xl border border-[#93D500]/30 shadow-[0_0_50px_rgba(147,213,0,0.15)] w-full max-w-md p-10 relative z-10">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center mb-6">
             <Image
               src="/images/kanva-logo.png"
               alt="Kanva Botanicals"
               width={200}
               height={80}
-              className="object-contain drop-shadow-[0_0_30px_rgba(147,213,0,0.4)]"
+              className="object-contain drop-shadow-[0_0_20px_rgba(147,213,0,0.3)]"
               priority
               style={{ width: 'auto', height: 'auto' }}
             />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-white mb-3">
             Welcome Back
           </h1>
-          <p className="text-gray-400">
+          <p className="text-gray-300 text-base">
             Sign in to access your portal
           </p>
         </div>
@@ -157,14 +157,14 @@ export default function LoginPage() {
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-5">
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-2">
               Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 id="email"
                 type="email"
@@ -172,18 +172,18 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ben@kanvabotanicals.com"
                 required
-                className="w-full pl-10 pr-4 py-3 bg-black/30 border border-gray-600/50 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[#93D500] focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-black/30 border border-gray-600/70 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#93D500] focus:border-transparent transition-all"
               />
             </div>
           </div>
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-2">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 id="password"
                 type="password"
@@ -191,7 +191,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full pl-10 pr-4 py-3 bg-black/30 border border-gray-600/50 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[#93D500] focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-black/30 border border-gray-600/70 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#93D500] focus:border-transparent transition-all"
               />
             </div>
           </div>
@@ -204,7 +204,7 @@ export default function LoginPage() {
           >
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
                 Signing in...
               </>
             ) : (
@@ -214,8 +214,8 @@ export default function LoginPage() {
         </form>
 
         {/* Domain Notice */}
-        <div className="mt-6 text-center text-sm text-gray-500">
-          Authorized for <span className="text-[#93D500]">@kanvabotanicals.com</span> and <span className="text-[#93D500]">@cwlbrands.com</span>
+        <div className="mt-8 text-center text-sm text-gray-400">
+          Authorized for <span className="text-[#93D500] font-medium">@kanvabotanicals.com</span> and <span className="text-[#93D500] font-medium">@cwlbrands.com</span>
         </div>
       </div>
     </div>
