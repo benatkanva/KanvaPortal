@@ -16,7 +16,8 @@
     "init-db": "node scripts/init-firestore-web.js",
     "discover-relationships": "ts-node --project tsconfig.scripts.json scripts/discover-relationships.ts",
     "analyze-data-access": "ts-node --project tsconfig.scripts.json scripts/analyze-data-access.ts",
-    "inspect-schema": "ts-node --project tsconfig.scripts.json scripts/inspect-complete-schema.ts"
+    "inspect-schema": "ts-node --project tsconfig.scripts.json scripts/inspect-complete-schema.ts",
+    "migrate-to-sql": "tsx scripts/migrate-firestore-to-sql.ts"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
@@ -27,6 +28,7 @@
     "@react-google-maps/api": "^2.20.7",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-table": "^8.21.3",
+    "@types/pg": "^8.16.0",
     "bfg": "^0.3.0",
     "copper-sdk": "^0.9.1",
     "csv-parse": "^6.1.0",
@@ -39,6 +41,7 @@
     "lucide-react": "^0.309.0",
     "next": "^14.2.33",
     "papaparse": "^5.5.3",
+    "pg": "^8.17.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
