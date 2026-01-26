@@ -44,6 +44,7 @@ export async function saveFilter(
     .insert({
       id: filterId,
       name: filter.name,
+      filter_type: 'accounts', // Required field - type of filter
       is_public: filter.isPublic,
       conditions: filter.conditions,
       user_id: userId,
