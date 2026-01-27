@@ -9,6 +9,7 @@ import { DataTable } from '@/components/crm/DataTable';
 import { SavedFiltersPanel } from '@/components/crm/SavedFiltersPanel';
 import { FilterSidebar, type FilterCondition } from '@/components/crm/FilterSidebar';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { TaskDetailSidebar } from '@/components/crm/TaskDetailSidebar';
 import { saveFilter, loadFilters, deleteFilter, updateFilter, type SavedFilter } from '@/lib/crm/supabaseFilterService';
 import { TASKS_FILTER_FIELDS } from '@/lib/crm/filterFields-tasks';
 import type { Task } from '@/lib/crm/types-crm';
@@ -25,6 +26,8 @@ import {
   ArrowUpDown,
   CheckSquare,
   MoreVertical,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 
 export default function TasksPage() {
@@ -54,6 +57,11 @@ export default function TasksPage() {
     }
     return false;
   });
+  
+  // View and Detail Modal State
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [detailSidebarOpen, setDetailSidebarOpen] = useState(false);
 
   // Data Fetching
   const { 
@@ -431,7 +439,18 @@ export default function TasksPage() {
   );
 
   const handleRowClick = (task: Task) => {
-    console.log('Task clicked:', task.id);
+    setSelectedTask(task);
+    setDetailSidebarOpen(true);
+  };
+  
+  const handleTaskUpdate = (taskId: string, updates: Partial<Task>) => {
+    // TODO: Implement Supabase update
+    console.log('Update task:', taskId, updates);
+  };
+  
+  const handleCloseDetailSidebar = () => {
+    setDetailSidebarOpen(false);
+    setTimeout(() => setSelectedTask(null), 300);
   };
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -560,11 +579,41 @@ export default function TasksPage() {
                 <>
                   <button
                     onClick={() => setFilterSidebarOpen(true)}
-                    className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                    className={`p-2 hover:bg-gray-100 rounded-md transition-colors relative ${
+                      activeFilterId !== 'all' ? 'text-[#93D500]' : 'text-gray-600'
+                    }`}
                     title="Filter"
                   >
-                    <Filter className="w-4 h-4 text-gray-600" />
+                    <Filter className="w-4 h-4" />
+                    {activeFilterId !== 'all' && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#93D500] rounded-full"></span>
+                    )}
                   </button>
+                  <div className="h-6 w-px bg-gray-300"></div>
+                  <div className="flex items-center gap-1 bg-gray-100 rounded-md p-1">
+                    <button
+                      onClick={() => setViewMode('table')}
+                      className={`p-1.5 rounded transition-colors ${
+                        viewMode === 'table' 
+                          ? 'bg-white text-gray-900 shadow-sm' 
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      title="Table View"
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('card')}
+                      className={`p-1.5 rounded transition-colors ${
+                        viewMode === 'card' 
+                          ? 'bg-white text-gray-900 shadow-sm' 
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      title="Card View"
+                    >
+                      <LayoutGrid className="w-4 h-4" />
+                    </button>
+                  </div>
                   <div className="relative">
                     <button
                       onClick={() => setSortMenuOpen(!sortMenuOpen)}
@@ -626,6 +675,15 @@ export default function TasksPage() {
           </div>
         </div>
       </div>
+
+      {/* Task Detail Sidebar Modal */}
+      <TaskDetailSidebar
+        isOpen={detailSidebarOpen}
+        onClose={handleCloseDetailSidebar}
+        task={selectedTask}
+        onUpdate={handleTaskUpdate}
+        onToggleComplete={handleTaskComplete}
+      />
     </div>
   );
 }
