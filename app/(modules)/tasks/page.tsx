@@ -66,6 +66,8 @@ export default function TasksPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailSidebarOpen, setDetailSidebarOpen] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [bulkActionsOpen, setBulkActionsOpen] = useState(false);
   
   const handleToggleExpand = (taskId: string) => {
     setExpandedTasks(prev => {
@@ -77,6 +79,89 @@ export default function TasksPage() {
       }
       return next;
     });
+  };
+  
+  const handleSelectTask = (taskId: string) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+  
+  const handleSelectAll = () => {
+    if (selectedTaskIds.size === tasks.length) {
+      setSelectedTaskIds(new Set());
+    } else {
+      setSelectedTaskIds(new Set(tasks.map(t => t.id)));
+    }
+  };
+  
+  const handleBulkExport = () => {
+    const selectedTasks = tasks.filter(t => selectedTaskIds.has(t.id));
+    const csv = [
+      ['Name', 'Status', 'Priority', 'Due Date', 'Owner'].join(','),
+      ...selectedTasks.map(t => [
+        t.name,
+        t.status || '',
+        t.priority || '',
+        t.due_date ? new Date(t.due_date).toLocaleDateString() : '',
+        t.owner || ''
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tasks-export-${new Date().toISOString()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  const handleBulkComplete = async () => {
+    try {
+      const { supabase } = await import('@/lib/supabase/client');
+      
+      const { error } = await supabase
+        .from('tasks')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .in('id', Array.from(selectedTaskIds));
+      
+      if (error) throw error;
+      
+      window.location.reload();
+    } catch (error) {
+      console.error('Error bulk completing tasks:', error);
+    }
+  };
+  
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedTaskIds.size} tasks? This cannot be undone.`)) return;
+    
+    try {
+      const { supabase } = await import('@/lib/supabase/client');
+      
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .in('id', Array.from(selectedTaskIds));
+      
+      if (error) throw error;
+      
+      setSelectedTaskIds(new Set());
+      window.location.reload();
+    } catch (error) {
+      console.error('Error bulk deleting tasks:', error);
+    }
   };
 
   // Data Fetching
@@ -286,6 +371,35 @@ export default function TasksPage() {
   // Define table columns
   const columns = useMemo<ColumnDef<Task, any>[]>(
     () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <input
+            type="checkbox"
+            checked={selectedTaskIds.size === tasks.length && tasks.length > 0}
+            onChange={handleSelectAll}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          />
+        ),
+        size: 50,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const task = row.original as Task & { isSubtask?: boolean };
+          if (task.isSubtask) return null;
+          
+          return (
+            <input
+              type="checkbox"
+              checked={selectedTaskIds.has(task.id)}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleSelectTask(task.id);
+              }}
+              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            />
+          );
+        },
+      },
       {
         id: 'complete',
         header: '',
@@ -681,6 +795,43 @@ export default function TasksPage() {
           />
           
           <div className="h-full overflow-auto bg-white">
+            {/* Bulk Actions Toolbar */}
+            {selectedTaskIds.size > 0 && (
+              <div className="sticky top-0 z-10 bg-blue-50 border-b border-blue-200 px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedTaskIds.size} task{selectedTaskIds.size > 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedTaskIds(new Set())}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleBulkExport}
+                    className="px-4 py-2 bg-white text-blue-700 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium"
+                  >
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={handleBulkComplete}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    Mark Complete
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {viewMode === 'table' ? (
               <DataTable
                 data={tasks}
