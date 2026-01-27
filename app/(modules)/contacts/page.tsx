@@ -1,16 +1,20 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useContactsFromSupabase as useContacts, useRefreshCRMData, useContactCountsFromSupabase as useContactCounts } from '@/lib/crm/hooks';
+import { useSupabasePeople, useSupabasePeopleCounts } from '@/lib/crm/hooks-crm';
 import { DataTable } from '@/components/crm/DataTable';
-import type { UnifiedContact } from '@/lib/crm/dataService';
-import Image from 'next/image';
+import { SavedFiltersPanel } from '@/components/crm/SavedFiltersPanel';
+import { FilterSidebar, type FilterCondition } from '@/components/crm/FilterSidebar';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { saveFilter, loadFilters, deleteFilter, updateFilter, type SavedFilter } from '@/lib/crm/supabaseFilterService';
+import type { Person } from '@/lib/crm/types-crm';
 import { 
   Plus,
-  RefreshCw,
+  Filter,
+  SortDesc,
   User,
   Phone,
   Mail,
@@ -22,20 +26,197 @@ import {
 export default function ContactsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { data, isLoading, isFetching } = useContacts({ pageSize: 50 });
-  const { data: counts } = useContactCounts();
-  const { refreshContacts } = useRefreshCRMData();
   
-  const contacts = data?.data || [];
+  // Filter and UI state
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
+  const [activeFilterId, setActiveFilterId] = useState<string | null>('all');
+  const [activeFilterConditions, setActiveFilterConditions] = useState<FilterCondition[]>([]);
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [loadingFilters, setLoadingFilters] = useState(true);
+  const [editingFilter, setEditingFilter] = useState<{ id: string; name: string; isPublic: boolean; conditions: FilterCondition[] } | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [filterToDelete, setFilterToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<{ field: string; direction: 'asc' | 'desc' }>({ field: 'name', direction: 'asc' });
+  const [mainSidebarCollapsed, setMainSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebar-collapsed') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleSidebarToggle = (e: CustomEvent) => {
+      setMainSidebarCollapsed(e.detail.isCollapsed);
+    };
+    window.addEventListener('sidebar-toggle', handleSidebarToggle as EventListener);
+    return () => window.removeEventListener('sidebar-toggle', handleSidebarToggle as EventListener);
+  }, []);
+  
+  const { 
+    data, 
+    isLoading, 
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useSupabasePeople({ 
+    pageSize: 50,
+    filterConditions: activeFilterConditions 
+  });
+  const { data: counts } = useSupabasePeopleCounts(activeFilterConditions);
+  
+  const contacts = useMemo(() => {
+    const flatContacts = data?.pages.flatMap(page => page.data) || [];
+    return flatContacts.sort((a, b) => {
+      const aValue = a[sortBy.field as keyof Person];
+      const bValue = b[sortBy.field as keyof Person];
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      let comparison = 0;
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        comparison = aValue.localeCompare(bValue);
+      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        comparison = aValue - bValue;
+      } else {
+        comparison = String(aValue).localeCompare(String(bValue));
+      }
+      return sortBy.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [data, sortBy]);
+  
   const totalContacts = counts?.total || 0;
   const withAccounts = counts?.withAccounts || 0;
+  
+  useEffect(() => {
+    if (!user) return;
+    const fetchFilters = async () => {
+      try {
+        setLoadingFilters(true);
+        const filters = await loadFilters(user.id, 'people');
+        setSavedFilters(filters);
+      } catch (error) {
+        console.error('Error loading filters:', error);
+      } finally {
+        setLoadingFilters(false);
+      }
+    };
+    fetchFilters();
+  }, [user]);
+  
+  const publicFilters = savedFilters.filter(f => f.isPublic);
+  const privateFilters = savedFilters.filter(f => !f.isPublic);
+  
+  const handleFilterSave = async (filter: { name: string; isPublic: boolean; conditions: FilterCondition[] }) => {
+    if (!user) return;
+    try {
+      if (editingFilter) {
+        await updateFilter(editingFilter.id, {
+          name: filter.name,
+          isPublic: filter.isPublic,
+          conditions: filter.conditions,
+        });
+        const filters = await loadFilters(user.id, 'people');
+        setSavedFilters(filters);
+        if (activeFilterId === editingFilter.id) {
+          setActiveFilterConditions(filter.conditions);
+        }
+        setEditingFilter(null);
+      } else {
+        const filterId = await saveFilter({
+          name: filter.name,
+          isPublic: filter.isPublic,
+          conditions: filter.conditions,
+          createdBy: user.id,
+          entityType: 'people',
+        }, user.id);
+        const filters = await loadFilters(user.id, 'people');
+        setSavedFilters(filters);
+        setActiveFilterId(filterId);
+        setActiveFilterConditions(filter.conditions);
+      }
+      setFilterSidebarOpen(false);
+    } catch (error) {
+      console.error('Error saving filter:', error);
+    }
+  };
+  
+  const handleFilterEdit = (filterId: string) => {
+    const filter = savedFilters.find(f => f.id === filterId);
+    if (filter) {
+      setEditingFilter({
+        id: filter.id,
+        name: filter.name,
+        isPublic: filter.isPublic,
+        conditions: filter.conditions,
+      });
+      setFilterSidebarOpen(true);
+    }
+  };
+  
+  const handleFilterDelete = (filterId: string) => {
+    const filter = savedFilters.find(f => f.id === filterId);
+    if (filter) {
+      setFilterToDelete({ id: filter.id, name: filter.name });
+      setDeleteConfirmOpen(true);
+    }
+  };
+  
+  const confirmDeleteFilter = async () => {
+    if (!filterToDelete) return;
+    try {
+      await deleteFilter(filterToDelete.id);
+      const filters = await loadFilters(user!.id, 'people');
+      setSavedFilters(filters);
+      if (activeFilterId === filterToDelete.id) {
+        setActiveFilterId('all');
+        setActiveFilterConditions([]);
+      }
+      setFilterToDelete(null);
+    } catch (error) {
+      console.error('Error deleting filter:', error);
+    }
+  };
+  
+  const handleFilterCopy = async (filterId: string) => {
+    if (!user) return;
+    const filter = savedFilters.find(f => f.id === filterId);
+    if (!filter) return;
+    try {
+      const newFilterId = await saveFilter({
+        name: `${filter.name} (Copy)`,
+        isPublic: false,
+        conditions: filter.conditions,
+        createdBy: user.id,
+        entityType: 'people',
+      }, user.id);
+      const filters = await loadFilters(user.id, 'people');
+      setSavedFilters(filters);
+      setActiveFilterId(newFilterId);
+      setActiveFilterConditions(filter.conditions);
+    } catch (error) {
+      console.error('Error copying filter:', error);
+    }
+  };
+  
+  const handleFilterSelect = (filterId: string) => {
+    setActiveFilterId(filterId);
+    if (filterId === 'all') {
+      setActiveFilterConditions([]);
+      return;
+    }
+    const filter = savedFilters.find(f => f.id === filterId);
+    if (filter) {
+      setActiveFilterConditions(filter.conditions);
+    }
+  };
 
-  // Define table columns
-  const columns = useMemo<ColumnDef<UnifiedContact, any>[]>(
+  const columns = useMemo<ColumnDef<Person, any>[]>(
     () => [
       {
         id: 'name',
-        accessorFn: (row) => `${row.firstName || ''} ${row.lastName || ''}`.trim(),
+        accessorKey: 'name',
         header: 'Name',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
@@ -49,10 +230,7 @@ export default function ContactsPage() {
               }}
               className="font-medium text-primary-600 hover:text-primary-700 hover:underline text-left truncate"
             >
-              {row.original.firstName} {row.original.lastName}
-              {row.original.isPrimaryContact && (
-                <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Primary</span>
-              )}
+              {row.original.name}
             </button>
           </div>
         ),
@@ -69,12 +247,12 @@ export default function ContactsPage() {
         ),
       },
       {
-        id: 'accountName',
-        accessorKey: 'accountName',
+        id: 'company_name',
+        accessorKey: 'company_name',
         header: 'Account',
         cell: ({ row }) => {
-          const account = row.original.accountName;
-          const accountId = row.original.accountId;
+          const account = row.original.company_name;
+          const accountId = row.original.account_id;
           return account ? (
             <button
               onClick={(e) => {
@@ -153,24 +331,30 @@ export default function ContactsPage() {
     [router]
   );
 
-  // Handle row click - navigate to contact detail
-  const handleRowClick = (contact: UnifiedContact) => {
+  const handleRowClick = (contact: Person) => {
     router.push(`/contacts/${contact.id}`);
   };
 
-  // Auth check
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-          <Image 
-            src="/images/kanva_logo_rotate.gif" 
-            alt="Loading..." 
-            width={64}
-            height={64}
-            className="mx-auto mb-4"
-            priority
-            unoptimized
-          />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#93D500]"></div>
       </div>
     );
   }
@@ -181,58 +365,159 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage your contacts from Copper and manual entries
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => refreshContacts()}
-            disabled={isFetching}
-            className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-          <button
-            onClick={() => router.push('/contacts/new')}
-            className="px-4 py-2 bg-[#93D500] text-white rounded-lg hover:bg-[#84c000] flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Contact
-          </button>
-        </div>
-      </div>
+    <div 
+      className="fixed inset-0 flex overflow-hidden bg-gray-50 transition-all duration-300"
+      style={{ 
+        top: '64px',
+        left: mainSidebarCollapsed ? '64px' : '256px'
+      }}
+    >
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setFilterToDelete(null);
+        }}
+        onConfirm={confirmDeleteFilter}
+        title="Delete Filter"
+        message={filterToDelete ? `Are you sure you want to delete "${filterToDelete.name}"?` : ''}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
 
-      {/* Stats Summary */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="text-sm text-gray-500">Total Contacts</div>
-          <div className="text-2xl font-bold text-gray-900">{totalContacts.toLocaleString()}</div>
+      <SavedFiltersPanel
+        isCollapsed={filtersCollapsed}
+        onToggle={() => setFiltersCollapsed(!filtersCollapsed)}
+        onFilterSelect={handleFilterSelect}
+        onNewFilter={() => {
+          setEditingFilter(null);
+          setFilterSidebarOpen(true);
+        }}
+        onEditFilter={handleFilterEdit}
+        onDeleteFilter={handleFilterDelete}
+        onCopyFilter={handleFilterCopy}
+        activeFilterId={activeFilterId}
+        publicFilters={publicFilters}
+        privateFilters={privateFilters}
+      />
+
+      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        <div className="bg-white border-b border-gray-200 px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                {activeFilterId === 'all' ? 'All Contacts' : publicFilters.concat(privateFilters).find(f => f.id === activeFilterId)?.name || 'Contacts'}
+              </h1>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {totalContacts.toLocaleString()} total contacts
+                <span className="text-gray-400 mx-2">•</span>
+                With Accounts: <span className="font-medium text-[#93D500]">{withAccounts.toLocaleString()}</span>
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="text-sm text-gray-500">With Accounts</div>
-          <div className="text-2xl font-bold text-green-600">
-            {withAccounts.toLocaleString()}
+
+        <div className="flex-1 overflow-hidden relative">
+          <FilterSidebar
+            isOpen={filterSidebarOpen}
+            onClose={() => {
+              setFilterSidebarOpen(false);
+              setEditingFilter(null);
+            }}
+            onSave={handleFilterSave}
+            editingFilter={editingFilter}
+            entityType="people"
+          />
+          
+          <div className="h-full overflow-auto bg-white">
+            <DataTable
+              data={contacts}
+              columns={columns}
+              loading={isLoading}
+              onRowClick={handleRowClick}
+              tableId="contacts"
+              searchPlaceholder="Search contacts by name, email, phone, account..."
+              leftToolbarActions={
+                <>
+                  <button
+                    onClick={() => setFilterSidebarOpen(true)}
+                    className={`p-2 hover:bg-gray-100 rounded-md transition-colors relative ${
+                      activeFilterId !== 'all' ? 'text-[#93D500]' : 'text-gray-600'
+                    }`}
+                    title="Filter"
+                  >
+                    <Filter className="w-4 h-4" />
+                    {activeFilterId !== 'all' && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-[#93D500] rounded-full"></span>
+                    )}
+                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setSortMenuOpen(!sortMenuOpen)}
+                      className="p-2 hover:bg-gray-100 rounded-md transition-colors text-gray-600"
+                      title="Sort"
+                    >
+                      <SortDesc className="w-4 h-4" />
+                    </button>
+                    {sortMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setSortMenuOpen(false)} />
+                        <div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                          <div className="px-3 py-2 border-b border-gray-100">
+                            <p className="text-xs font-semibold text-gray-500 uppercase">Sort By</p>
+                          </div>
+                          {[
+                            { field: 'name', label: 'Name (A-Z)', direction: 'asc' as const },
+                            { field: 'name', label: 'Name (Z-A)', direction: 'desc' as const },
+                            { field: 'created_at', label: 'Date Added (Newest)', direction: 'desc' as const },
+                            { field: 'created_at', label: 'Date Added (Oldest)', direction: 'asc' as const },
+                          ].map((option) => (
+                            <button
+                              key={`${option.field}-${option.direction}`}
+                              onClick={() => {
+                                setSortBy({ field: option.field, direction: option.direction });
+                                setSortMenuOpen(false);
+                              }}
+                              className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors ${
+                                sortBy.field === option.field && sortBy.direction === option.direction
+                                  ? 'bg-[#93D500]/10 text-[#93D500] font-medium'
+                                  : 'text-gray-700'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              }
+              rightToolbarActions={
+                <button
+                  onClick={() => router.push('/contacts/new')}
+                  className="px-4 py-2 bg-[#93D500] text-white rounded-md hover:bg-[#84c000] flex items-center gap-2 transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Contact
+                </button>
+              }
+            />
+        
+            {hasNextPage && (
+              <div ref={loadMoreRef} className="flex justify-center py-4">
+                {isFetchingNextPage && (
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#93D500]"></div>
+                    <span className="text-sm">Loading more contacts...</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Data Table */}
-      <DataTable
-        data={contacts}
-        columns={columns}
-        loading={isLoading}
-        onRowClick={handleRowClick}
-        tableId="contacts"
-        searchPlaceholder="Search contacts by name, email, phone, account..."
-        pageSize={50}
-      />
     </div>
   );
 }
