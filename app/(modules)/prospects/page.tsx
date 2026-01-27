@@ -389,6 +389,277 @@ export default function ProspectsPage() {
           );
         },
       },
+      {
+        id: 'first_name',
+        accessorKey: 'first_name',
+        header: 'First Name',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'last_name',
+        accessorKey: 'last_name',
+        header: 'Last Name',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'account',
+        accessorKey: 'account',
+        header: 'Account',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'account_number',
+        accessorKey: 'account_number',
+        header: 'Account #',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'street',
+        accessorKey: 'street',
+        header: 'Street',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'postal_code',
+        accessorKey: 'postal_code',
+        header: 'Postal Code',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'country',
+        accessorKey: 'country',
+        header: 'Country',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'value',
+        accessorKey: 'value',
+        header: 'Value',
+        cell: ({ getValue }) => {
+          const value = getValue() as number | null;
+          return value ? (
+            <div className="flex items-center gap-1 text-gray-700 font-medium">
+              <span>$</span>
+              {value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </div>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'converted_at',
+        accessorKey: 'converted_at',
+        header: 'Converted At',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'converted_value',
+        accessorKey: 'converted_value',
+        header: 'Converted Value',
+        cell: ({ getValue }) => {
+          const value = getValue() as number | null;
+          return value ? (
+            <div className="flex items-center gap-1 text-green-700 font-medium">
+              <span>$</span>
+              {value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </div>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'owned_by',
+        accessorKey: 'owned_by',
+        header: 'Owned By',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'last_status_at',
+        accessorKey: 'last_status_at',
+        header: 'Last Status',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'last_contacted',
+        accessorKey: 'last_contacted',
+        header: 'Last Contacted',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'inactive_days',
+        accessorKey: 'inactive_days',
+        header: 'Inactive Days',
+        cell: ({ getValue }) => {
+          const days = getValue() as number;
+          return days !== undefined ? (
+            <span className="text-gray-600">{days}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'interaction_count',
+        accessorKey: 'interaction_count',
+        header: 'Interactions',
+        cell: ({ getValue }) => {
+          const count = getValue() as number;
+          return count !== undefined ? (
+            <span className="text-gray-600">{count}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'customer_priority',
+        accessorKey: 'customer_priority',
+        header: 'Priority',
+        cell: ({ getValue }) => {
+          const priority = getValue() as string;
+          if (!priority) return <span className="text-gray-400">-</span>;
+          const colors: Record<string, string> = {
+            '1': 'bg-red-100 text-red-700',
+            '2': 'bg-orange-100 text-orange-700',
+            '3': 'bg-yellow-100 text-yellow-700',
+            '4': 'bg-blue-100 text-blue-700',
+            '5': 'bg-gray-100 text-gray-600',
+          };
+          return (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[priority] || 'bg-gray-100'}`}>
+              P{priority}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'business_model',
+        accessorKey: 'business_model',
+        header: 'Business Model',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'details',
+        accessorKey: 'details',
+        header: 'Details',
+        cell: ({ getValue }) => {
+          const details = getValue() as string;
+          return details ? (
+            <span className="text-gray-600 text-sm truncate max-w-[300px] block" title={details}>
+              {details}
+            </span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'prospect_notes',
+        accessorKey: 'prospect_notes',
+        header: 'Notes',
+        cell: ({ getValue }) => {
+          const notes = getValue() as string;
+          return notes ? (
+            <span className="text-gray-600 text-sm truncate max-w-[300px] block" title={notes}>
+              {notes}
+            </span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'copper_id',
+        accessorKey: 'copper_id',
+        header: 'Copper ID',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'copper_url',
+        accessorKey: 'copper_url',
+        header: 'Copper URL',
+        cell: ({ getValue }) => {
+          const url = getValue() as string;
+          return url ? (
+            <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
+              View in Copper
+            </a>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'work_email',
+        accessorKey: 'work_email',
+        header: 'Work Email',
+        cell: ({ getValue }) => {
+          const email = getValue() as string;
+          return email ? (
+            <a href={`mailto:${email}`} className="text-blue-600 hover:underline text-sm truncate max-w-[200px] block">
+              {email}
+            </a>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'website',
+        accessorKey: 'website',
+        header: 'Website',
+        cell: ({ getValue }) => {
+          const website = getValue() as string;
+          return website ? (
+            <a href={website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm truncate max-w-[200px] block">
+              {website}
+            </a>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'created_at',
+        accessorKey: 'created_at',
+        header: 'Created At',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'updated_at',
+        accessorKey: 'updated_at',
+        header: 'Updated At',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
     ],
     []
   );

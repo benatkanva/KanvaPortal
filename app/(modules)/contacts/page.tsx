@@ -87,7 +87,7 @@ export default function ContactsPage() {
   }, [data, sortBy]);
   
   const totalContacts = counts?.total || 0;
-  const withAccounts = counts?.withAccounts || 0;
+  const withAccounts = counts?.with_accounts || 0;
   
   useEffect(() => {
     if (!user) return;
@@ -322,6 +322,180 @@ export default function ContactsPage() {
               <MapPin className="w-3.5 h-3.5" />
               {city && `${city}, `}{state}
             </div>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'region',
+        accessorKey: 'region',
+        header: 'Region',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'segment',
+        accessorKey: 'segment',
+        header: 'Segment',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'account_type',
+        accessorKey: 'account_type',
+        header: 'Account Type',
+        cell: ({ getValue }) => {
+          const types = getValue() as string[] | null;
+          return types?.length ? (
+            <div className="flex flex-wrap gap-1">
+              {types.slice(0, 2).map((t, i) => (
+                <span key={i} className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">{t}</span>
+              ))}
+              {types.length > 2 && (
+                <span className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">+{types.length - 2}</span>
+              )}
+            </div>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'customer_priority',
+        accessorKey: 'customer_priority',
+        header: 'Priority',
+        cell: ({ getValue }) => {
+          const priority = getValue() as string;
+          if (!priority) return <span className="text-gray-400">-</span>;
+          const colors: Record<string, string> = {
+            '1': 'bg-red-100 text-red-700',
+            '2': 'bg-orange-100 text-orange-700',
+            '3': 'bg-yellow-100 text-yellow-700',
+            '4': 'bg-blue-100 text-blue-700',
+            '5': 'bg-gray-100 text-gray-600',
+          };
+          return (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[priority] || 'bg-gray-100'}`}>
+              P{priority}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'organization_level',
+        accessorKey: 'organization_level',
+        header: 'Org Level',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'account_number',
+        accessorKey: 'account_number',
+        header: 'Account #',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'first_name',
+        accessorKey: 'first_name',
+        header: 'First Name',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'last_name',
+        accessorKey: 'last_name',
+        header: 'Last Name',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'street',
+        accessorKey: 'street',
+        header: 'Street',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'postal_code',
+        accessorKey: 'postal_code',
+        header: 'Postal Code',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'country',
+        accessorKey: 'country',
+        header: 'Country',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'copper_id',
+        accessorKey: 'copper_id',
+        header: 'Copper ID',
+        cell: ({ getValue }) => (
+          <span className="text-gray-600 font-mono text-sm">{getValue() || '-'}</span>
+        ),
+      },
+      {
+        id: 'interaction_count',
+        accessorKey: 'interaction_count',
+        header: 'Interactions',
+        cell: ({ getValue }) => {
+          const count = getValue() as number;
+          return count !== undefined ? (
+            <span className="text-gray-600">{count}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'date_created',
+        accessorKey: 'date_created',
+        header: 'Date Created',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'date_modified',
+        accessorKey: 'date_modified',
+        header: 'Date Modified',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'created_at',
+        accessorKey: 'created_at',
+        header: 'Created At',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
+          ) : <span className="text-gray-400">-</span>;
+        },
+      },
+      {
+        id: 'updated_at',
+        accessorKey: 'updated_at',
+        header: 'Updated At',
+        cell: ({ getValue }) => {
+          const date = getValue() as string;
+          return date ? (
+            <span className="text-gray-600 text-sm">{new Date(date).toLocaleDateString()}</span>
           ) : <span className="text-gray-400">-</span>;
         },
       },
