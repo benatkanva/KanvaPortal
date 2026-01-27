@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useSupabaseLeads, useSupabaseLeadCounts } from '@/lib/crm/hooks-crm';
+import { useLeads, useLeadCounts } from '@/lib/crm/hooks-crm';
 import { DataTable } from '@/components/crm/DataTable';
 import { SavedFiltersPanel } from '@/components/crm/SavedFiltersPanel';
 import { FilterSidebar, type FilterCondition } from '@/components/crm/FilterSidebar';
@@ -60,15 +60,15 @@ export default function ProspectsPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
-  } = useSupabaseLeads({ 
+  } = useLeads({ 
     pageSize: 50,
     filterConditions: activeFilterConditions 
   });
-  const { data: counts } = useSupabaseLeadCounts(activeFilterConditions);
+  const { data: counts } = useLeadCounts(activeFilterConditions);
   
   const prospects = useMemo(() => {
-    const flatProspects = data?.pages.flatMap(page => page.data) || [];
-    return flatProspects.sort((a, b) => {
+    const flatProspects = (data?.pages.flatMap(page => page.data) || []) as Lead[];
+    return flatProspects.sort((a: Lead, b: Lead) => {
       const aValue = a[sortBy.field as keyof Lead];
       const bValue = b[sortBy.field as keyof Lead];
       if (aValue == null && bValue == null) return 0;
@@ -97,7 +97,7 @@ export default function ProspectsPage() {
     const fetchFilters = async () => {
       try {
         setLoadingFilters(true);
-        const filters = await loadFilters(user.id, 'leads');
+        const filters = await loadFilters(user.id);
         setSavedFilters(filters);
       } catch (error) {
         console.error('Error loading filters:', error);
@@ -120,7 +120,7 @@ export default function ProspectsPage() {
           isPublic: filter.isPublic,
           conditions: filter.conditions,
         });
-        const filters = await loadFilters(user.id, 'leads');
+        const filters = await loadFilters(user.id);
         setSavedFilters(filters);
         if (activeFilterId === editingFilter.id) {
           setActiveFilterConditions(filter.conditions);
@@ -132,9 +132,8 @@ export default function ProspectsPage() {
           isPublic: filter.isPublic,
           conditions: filter.conditions,
           createdBy: user.id,
-          entityType: 'leads',
         }, user.id);
-        const filters = await loadFilters(user.id, 'leads');
+        const filters = await loadFilters(user.id);
         setSavedFilters(filters);
         setActiveFilterId(filterId);
         setActiveFilterConditions(filter.conditions);
@@ -170,7 +169,7 @@ export default function ProspectsPage() {
     if (!filterToDelete) return;
     try {
       await deleteFilter(filterToDelete.id);
-      const filters = await loadFilters(user!.id, 'leads');
+      const filters = await loadFilters(user!.id);
       setSavedFilters(filters);
       if (activeFilterId === filterToDelete.id) {
         setActiveFilterId('all');
@@ -192,9 +191,8 @@ export default function ProspectsPage() {
         isPublic: false,
         conditions: filter.conditions,
         createdBy: user.id,
-        entityType: 'leads',
       }, user.id);
-      const filters = await loadFilters(user.id, 'leads');
+      const filters = await loadFilters(user.id);
       setSavedFilters(filters);
       setActiveFilterId(newFilterId);
       setActiveFilterConditions(filter.conditions);
@@ -491,7 +489,6 @@ export default function ProspectsPage() {
             }}
             onSave={handleFilterSave}
             editingFilter={editingFilter}
-            entityType="leads"
           />
           
           <div className="h-full overflow-auto bg-white">
