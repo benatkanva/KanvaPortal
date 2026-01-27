@@ -209,9 +209,42 @@ export default function TasksPage() {
     }
   };
 
+  // Handle task completion toggle
+  const handleTaskComplete = async (taskId: string, currentStatus: string) => {
+    // TODO: Implement actual API call to update task status
+    console.log('Toggle task completion:', taskId, currentStatus);
+  };
+
   // Define table columns
   const columns = useMemo<ColumnDef<Task, any>[]>(
     () => [
+      {
+        id: 'complete',
+        header: '',
+        size: 50,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const isCompleted = row.original.status === 'completed' || row.original.status === 'Completed';
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTaskComplete(row.original.id, row.original.status || 'pending');
+              }}
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                isCompleted 
+                  ? 'bg-green-500 border-green-500' 
+                  : 'border-gray-300 hover:border-green-400'
+              }`}
+              title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+            >
+              {isCompleted && (
+                <CheckCircle2 className="w-4 h-4 text-white" />
+              )}
+            </button>
+          );
+        },
+      },
       {
         id: 'status',
         accessorKey: 'status',
