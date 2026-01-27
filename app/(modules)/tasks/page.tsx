@@ -29,6 +29,8 @@ import {
   MoreVertical,
   LayoutGrid,
   List,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function TasksPage() {
@@ -92,10 +94,36 @@ export default function TasksPage() {
   });
   const { data: counts } = useTaskCounts(activeFilterConditions);
   
-  // Sorted and flattened tasks
+  // Sorted and flattened tasks with subtasks
   const tasks = useMemo(() => {
     const flatTasks = (data?.pages.flatMap(page => page.data) || []) as Task[];
-    return flatTasks.sort((a: Task, b: Task) => {
+    
+    // Separate parent tasks and subtasks
+    const parentTasks = flatTasks.filter(t => !t.parent_task_id);
+    const subtaskMap = new Map<string, Task[]>();
+    
+    flatTasks.filter(t => t.parent_task_id).forEach(subtask => {
+      if (!subtaskMap.has(subtask.parent_task_id!)) {
+        subtaskMap.set(subtask.parent_task_id!, []);
+      }
+      subtaskMap.get(subtask.parent_task_id!)!.push(subtask);
+    });
+    
+    // Build flat list with subtasks nested
+    const result: (Task & { isSubtask?: boolean; level?: number })[] = [];
+    parentTasks.forEach(parent => {
+      result.push(parent);
+      
+      // Add subtasks if parent is expanded
+      if (expandedTasks.has(parent.id) && subtaskMap.has(parent.id)) {
+        const subtasks = subtaskMap.get(parent.id)!;
+        subtasks.forEach(subtask => {
+          result.push({ ...subtask, isSubtask: true, level: 1 });
+        });
+      }
+    });
+    
+    return result.sort((a: Task, b: Task) => {
       const aValue = (a as any)[sortBy.field];
       const bValue = (b as any)[sortBy.field];
       let comparison = 0;
@@ -110,7 +138,7 @@ export default function TasksPage() {
       }
       return sortBy.direction === 'asc' ? comparison : -comparison;
     });
-  }, [data, sortBy]);
+  }, [data, sortBy, expandedTasks]);
   
   const totalTasks = counts?.total || 0;
   const completedTasks = counts?.completed || 0;
@@ -286,6 +314,38 @@ export default function TasksPage() {
         },
       },
       {
+        id: 'expand',
+        header: '',
+        size: 40,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const task = row.original as Task & { isSubtask?: boolean };
+          if (task.isSubtask) return null;
+          
+          // TODO: Check if task has subtasks
+          const hasSubtasks = false; // Will be replaced with actual check
+          
+          if (!hasSubtasks) return null;
+          
+          const isExpanded = expandedTasks.has(task.id);
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleExpand(task.id);
+              }}
+              className="p-1 hover:bg-gray-100 rounded transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
+          );
+        },
+      },
+      {
         id: 'status',
         accessorKey: 'status',
         header: 'Status',
@@ -311,11 +371,18 @@ export default function TasksPage() {
         id: 'name',
         accessorKey: 'name',
         header: 'Task',
-        cell: ({ row }) => (
-          <div className="font-medium text-gray-900 max-w-md truncate">
-            {row.original.name}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const task = row.original as Task & { isSubtask?: boolean; level?: number };
+          const indentClass = task.isSubtask ? 'ml-8' : '';
+          return (
+            <div className={`font-medium text-gray-900 max-w-md truncate ${indentClass}`}>
+              {task.isSubtask && (
+                <span className="inline-block mr-2 text-gray-400">↳</span>
+              )}
+              {task.name}
+            </div>
+          );
+        },
       },
       {
         id: 'priority',
@@ -467,7 +534,7 @@ export default function TasksPage() {
         },
       },
     ],
-    []
+    [expandedTasks, handleToggleExpand]
   );
 
   const handleRowClick = (task: Task) => {
