@@ -113,8 +113,8 @@ async function migrateOpportunities() {
         
         // Ownership
         owner: data.Owner || null,
-        owner_id: data['Owner Id'] || null,
-        assignee_id: null,
+        owner_id: parseInteger(data['Owner Id']),
+        assignee_id: parseInteger(data.assigneeId || data.assignee_id),
         
         // Dates
         close_date: data['Close Date'] ? new Date(data['Close Date']) : null,
